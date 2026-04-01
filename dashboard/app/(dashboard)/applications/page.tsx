@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { PartnerApplication } from "@/lib/types";
 import { ApplicationsClient } from "./ApplicationsClient";

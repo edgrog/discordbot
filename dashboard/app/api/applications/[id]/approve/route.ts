@@ -24,7 +24,7 @@ export async function POST(
       .eq("id", user.id)
       .single();
 
-    if (!dashUser) {
+    if (!dashUser || (dashUser.role !== "admin" && dashUser.role !== "reviewer")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

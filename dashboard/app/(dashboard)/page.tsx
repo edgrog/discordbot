@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { createServerClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatsCard } from "@/components/dashboard/StatsCard";
