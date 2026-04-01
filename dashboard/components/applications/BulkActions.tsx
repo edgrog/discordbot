@@ -16,7 +16,7 @@ import {
 
 interface BulkActionsProps {
   selectedCount: number;
-  selectedIds: number[];
+  selectedIds: string[];
   onComplete: () => void;
 }
 
@@ -38,7 +38,7 @@ export function BulkActions({
         `${action === "approve" ? "Approving" : "Rejecting"} ${i + 1} of ${selectedIds.length}...`
       );
       try {
-        const res = await fetch(`/api/applications/${selectedIds[i]}/${action}`, {
+        const res = await fetch(`/api/submissions/${selectedIds[i]}/${action}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),

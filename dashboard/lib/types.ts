@@ -1,11 +1,37 @@
-export interface DashboardUser {
+// === Multi-Form Types ===
+
+export interface Form {
   id: string;
-  email: string;
-  name: string | null;
-  role: "admin" | "member";
+  name: string;
+  slug: string;
+  description: string | null;
+  status: "draft" | "active" | "archived";
+  discord_command_name: string | null;
+  settings: FormSettings;
   created_at: string;
   created_by: string | null;
-  last_login: string | null;
+  updated_at: string;
+  updated_by: string | null;
+  submission_count?: number;
+}
+
+export interface FormSettings {
+  role_id?: string;
+  dm_approve_template?: string;
+  dm_reject_template?: string;
+  admin_channel_id?: string;
+  has_categories?: boolean;
+  categories?: Record<string, { label: string; emoji: string }>;
+}
+
+export interface FormStep {
+  id: string;
+  form_id: string;
+  position: number;
+  title: string;
+  fields: FormField[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FormField {
@@ -16,36 +42,29 @@ export interface FormField {
   placeholder?: string;
 }
 
-export interface FormConfig {
-  id: number;
-  category: "personal" | "bar" | "club" | "artist" | "creator";
-  step: number;
-  step_title: string;
-  fields: FormField[];
-  updated_at: string;
-  updated_by: string | null;
-}
-
-export interface PartnerApplication {
-  id: number;
+export interface Submission {
+  id: string;
+  form_id: string;
   created_at: string;
   discord_id: string;
   discord_username: string | null;
-  full_name: string | null;
-  email: string | null;
-  phone: string | null;
-  dob: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  zip: string | null;
-  country: string | null;
-  category: "bar" | "club" | "artist" | "creator";
   answers: Record<string, string>;
   status: "pending" | "approved" | "rejected";
   reviewed_by: string | null;
   review_note: string | null;
   dm_sent: boolean;
+  form_name?: string;
+  form_slug?: string;
+}
+
+export interface DashboardUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: "admin" | "member";
+  created_at: string;
+  created_by: string | null;
+  last_login: string | null;
 }
 
 export interface AuditLogEntry {
@@ -74,24 +93,16 @@ export interface Setting {
   updated_by: string | null;
 }
 
-export type CategoryType = "creator" | "artist" | "club" | "bar";
-
-export const CATEGORY_LABELS: Record<CategoryType, string> = {
-  creator: "Creator",
-  artist: "Artist",
-  club: "Club",
-  bar: "Venue",
-};
-
-export const CATEGORY_COLORS: Record<CategoryType, string> = {
-  creator: "#8B5CF6",
-  artist: "#FF6B00",
-  club: "#00D4FF",
-  bar: "#3366FF",
-};
-
+// Status colors for badges
 export const STATUS_COLORS: Record<string, string> = {
   pending: "#FF6B00",
   approved: "#BFFF00",
   rejected: "#FF3366",
+};
+
+// Form status colors
+export const FORM_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  draft: { bg: "#FFE500", text: "#141414" },
+  active: { bg: "#BFFF00", text: "#141414" },
+  archived: { bg: "#E5E7EB", text: "#6B7280" },
 };

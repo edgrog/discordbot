@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { PartnerApplication, CategoryType } from "@/lib/types";
+import { Submission } from "@/lib/types";
 import { StatusBadge } from "@/components/applications/StatusBadge";
-import { CategoryBadge } from "@/components/applications/CategoryBadge";
 import {
   Table,
   TableBody,
@@ -13,7 +12,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 
 interface RecentApplicationsProps {
-  applications: PartnerApplication[];
+  applications: Submission[];
 }
 
 export function RecentApplications({
@@ -43,9 +42,8 @@ export function RecentApplications({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Category</TableHead>
             <TableHead>Discord</TableHead>
+            <TableHead>Form</TableHead>
             <TableHead>When</TableHead>
             <TableHead>Status</TableHead>
             <TableHead></TableHead>
@@ -55,13 +53,10 @@ export function RecentApplications({
           {applications.map((app) => (
             <TableRow key={app.id} className="hover:bg-chalk">
               <TableCell className="font-bold text-ink">
-                {app.full_name || "—"}
-              </TableCell>
-              <TableCell>
-                <CategoryBadge category={app.category as CategoryType} />
-              </TableCell>
-              <TableCell className="text-ink/60 font-mono text-xs">
                 {app.discord_username || app.discord_id}
+              </TableCell>
+              <TableCell className="font-bold text-ink/70 text-xs">
+                {app.form_name || "Unknown Form"}
               </TableCell>
               <TableCell className="text-ink/60 text-xs">
                 {formatDistanceToNow(new Date(app.created_at), {

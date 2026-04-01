@@ -1,8 +1,7 @@
 "use client";
 
-import { PartnerApplication, CategoryType } from "@/lib/types";
+import { Submission } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
-import { CategoryBadge } from "./CategoryBadge";
 import {
   Table,
   TableBody,
@@ -16,10 +15,10 @@ import { formatDistanceToNow } from "date-fns";
 import { ArrowUpDown } from "lucide-react";
 
 interface ApplicationsTableProps {
-  applications: PartnerApplication[];
-  selectedIds: Set<number>;
-  onSelectIds: (ids: Set<number>) => void;
-  onRowClick: (app: PartnerApplication) => void;
+  applications: Submission[];
+  selectedIds: Set<string>;
+  onSelectIds: (ids: Set<string>) => void;
+  onRowClick: (app: Submission) => void;
   sortField: string;
   sortDir: "asc" | "desc";
   onSort: (field: string) => void;
@@ -50,7 +49,7 @@ export function ApplicationsTable({
     }
   }
 
-  function toggleOne(id: number) {
+  function toggleOne(id: string) {
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
@@ -99,13 +98,11 @@ export function ApplicationsTable({
             </TableHead>
           )}
           <TableHead className="font-black uppercase tracking-wide text-ink text-xs">
-            <SortHeader field="full_name">Name</SortHeader>
+            Discord
           </TableHead>
           <TableHead className="font-black uppercase tracking-wide text-ink text-xs">
-            <SortHeader field="category">Category</SortHeader>
+            <SortHeader field="form_id">Form</SortHeader>
           </TableHead>
-          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Discord</TableHead>
-          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Location</TableHead>
           <TableHead className="font-black uppercase tracking-wide text-ink text-xs">
             <SortHeader field="created_at">Submitted</SortHeader>
           </TableHead>
@@ -131,16 +128,10 @@ export function ApplicationsTable({
               </TableCell>
             )}
             <TableCell className="font-bold text-ink">
-              {app.full_name || "—"}
-            </TableCell>
-            <TableCell>
-              <CategoryBadge category={app.category as CategoryType} />
-            </TableCell>
-            <TableCell className="font-bold text-ink/70">
               {app.discord_username || app.discord_id}
             </TableCell>
             <TableCell className="font-bold text-ink/70">
-              {[app.city, app.state].filter(Boolean).join(", ") || "—"}
+              {app.form_name || "Unknown Form"}
             </TableCell>
             <TableCell className="font-bold text-ink/70">
               {formatDistanceToNow(new Date(app.created_at), {

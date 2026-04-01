@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Dynamic Form Loading — Fetches form_config from Supabase, builds Discord modals
+// Dynamic Form Loading — Fetches forms + form_steps from Supabase, builds modals
 // ─────────────────────────────────────────────────────────────────────────────
 
 const {
@@ -9,79 +9,131 @@ const {
   TextInputStyle,
 } = require('discord.js');
 
-let formCache = null;  // { [category]: { [step]: { title, fields } } }
+let formCache = new Map();   // Map<formId, { form, steps }>
+let commandMap = new Map();  // Map<commandName, formId>
 let lastLoadedAt = null;
 
 /**
- * Load form configuration from Supabase and cache it.
+ * Load active forms and their steps from Supabase, populate both caches.
  */
 async function loadFormConfig(supabase, log) {
-  const { data, error } = await supabase
-    .from('form_config')
-    .select('*')
-    .order('category')
-    .order('step');
+  try {
+    // Fetch active forms
+    const { data: forms, error: formsErr } = await supabase
+      .from('forms')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
 
-  if (error) {
-    log('error', 'Failed to load form_config', { error: error.message });
+    if (formsErr) {
+      log('error', 'Failed to load forms', { error: formsErr.message });
+      return false;
+    }
+
+    if (!forms || forms.length === 0) {
+      log('warn', 'No active forms found');
+      formCache = new Map();
+      commandMap = new Map();
+      lastLoadedAt = new Date().toISOString();
+      return true;
+    }
+
+    // Fetch all steps for active forms
+    const formIds = forms.map(f => f.id);
+    const { data: steps, error: stepsErr } = await supabase
+      .from('form_steps')
+      .select('*')
+      .in('form_id', formIds)
+      .order('step_order', { ascending: true });
+
+    if (stepsErr) {
+      log('error', 'Failed to load form_steps', { error: stepsErr.message });
+      return false;
+    }
+
+    // Build caches
+    const newFormCache = new Map();
+    const newCommandMap = new Map();
+
+    for (const form of forms) {
+      const formSteps = (steps || [])
+        .filter(s => s.form_id === form.id)
+        .sort((a, b) => a.step_order - b.step_order);
+
+      newFormCache.set(form.id, { form, steps: formSteps });
+
+      if (form.discord_command_name) {
+        newCommandMap.set(form.discord_command_name, form.id);
+      }
+    }
+
+    formCache = newFormCache;
+    commandMap = newCommandMap;
+    lastLoadedAt = new Date().toISOString();
+
+    // Update settings table
+    await supabase
+      .from('settings')
+      .upsert({ key: 'forms_last_loaded', value: lastLoadedAt })
+      .then();
+
+    log('info', 'Form config loaded', {
+      forms: forms.length,
+      steps: (steps || []).length,
+      commands: [...newCommandMap.keys()],
+    });
+
+    return true;
+  } catch (err) {
+    log('error', 'loadFormConfig threw', { err: err.message });
     return false;
   }
-
-  const newCache = {};
-  for (const row of data) {
-    if (!newCache[row.category]) newCache[row.category] = {};
-    newCache[row.category][row.step] = {
-      title: row.step_title,
-      fields: row.fields,
-    };
-  }
-
-  formCache = newCache;
-  lastLoadedAt = new Date().toISOString();
-
-  // Update settings table with last loaded timestamp
-  await supabase
-    .from('settings')
-    .upsert({ key: 'forms_last_loaded', value: lastLoadedAt })
-    .then();
-
-  log('info', 'Form config loaded', {
-    categories: Object.keys(newCache),
-    totalSteps: data.length,
-  });
-
-  return true;
 }
 
 /**
- * Build a Discord modal from cached form config.
- * @param {string} customId - The custom ID for the modal
- * @param {string} category - Category name
- * @param {number} step - Step number (1-indexed)
- * @param {string} [titleOverride] - Optional title override (for emoji prefix)
+ * Get a form and its steps by form ID.
  */
-function buildModal(customId, category, step, titleOverride) {
-  if (!formCache || !formCache[category] || !formCache[category][step]) {
-    return null;
-  }
+function getFormById(formId) {
+  return formCache.get(formId) || null;
+}
 
-  const config = formCache[category][step];
-  const title = titleOverride || config.title;
+/**
+ * Get the form ID mapped to a slash command name.
+ */
+function getFormByCommand(commandName) {
+  return commandMap.get(commandName) || null;
+}
+
+/**
+ * Build a Discord ModalBuilder from a form step.
+ * customId format: form_<formId>_<stepIndex>
+ */
+function getModalForStep(formId, stepIndex) {
+  const entry = formCache.get(formId);
+  if (!entry || !entry.steps[stepIndex]) return null;
+
+  const step = entry.steps[stepIndex];
+  const fields = step.fields || [];
+
+  if (fields.length === 0) return null;
 
   const modal = new ModalBuilder()
-    .setCustomId(customId)
-    .setTitle(title);
+    .setCustomId(`form_${formId}_${stepIndex}`)
+    .setTitle((step.title || `Step ${stepIndex + 1}`).slice(0, 45));
 
-  for (const field of config.fields) {
+  for (const field of fields) {
     const input = new TextInputBuilder()
       .setCustomId(field.key)
-      .setLabel(field.label)
+      .setLabel((field.label || field.key).slice(0, 45))
       .setStyle(field.type === 'paragraph' ? TextInputStyle.Paragraph : TextInputStyle.Short)
-      .setRequired(field.required);
+      .setRequired(field.required !== false);
 
     if (field.placeholder) {
-      input.setPlaceholder(field.placeholder);
+      input.setPlaceholder(field.placeholder.slice(0, 100));
     }
+
+    if (field.min_length) input.setMinLength(field.min_length);
+    if (field.max_length) input.setMaxLength(field.max_length);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
   }
@@ -90,39 +142,34 @@ function buildModal(customId, category, step, titleOverride) {
 }
 
 /**
- * Get personal step modals (shared across all categories)
+ * Get the total number of steps for a form.
  */
-function getPersonalModal(step, category) {
-  const emoji = '🍋';
-  const titles = { 1: `${emoji} Grog Partner — Your Details`, 2: `${emoji} Grog Partner — Your Address` };
-  return buildModal(`personal_${step}_${category}`, 'personal', step, titles[step]);
+function getStepCount(formId) {
+  const entry = formCache.get(formId);
+  return entry ? entry.steps.length : 0;
 }
 
 /**
- * Get category-specific step modal
+ * Get field keys for a specific step of a form.
  */
-function getCategoryModal(category, step) {
-  const emojis = { bar: '🍺', club: '🎉', artist: '🎨', creator: '🎥' };
-  const emoji = emojis[category] || '';
-  const config = formCache?.[category]?.[step];
-  const title = config ? `${emoji} ${config.title}` : '';
-  return buildModal(`cat_${category}_${step}`, category, step, title);
+function getFieldKeysForStep(formId, stepIndex) {
+  const entry = formCache.get(formId);
+  if (!entry || !entry.steps[stepIndex]) return [];
+  return (entry.steps[stepIndex].fields || []).map(f => f.key);
 }
 
 /**
- * Get the number of category-specific steps for a category.
+ * Get all active forms with their steps.
  */
-function getCategoryStepCount(category) {
-  if (!formCache || !formCache[category]) return 0;
-  return Object.keys(formCache[category]).length;
+function getAllActiveForms() {
+  return Array.from(formCache.values());
 }
 
 /**
- * Get all field keys for a category step.
+ * Get the command-to-formId mapping.
  */
-function getFieldKeys(category, step) {
-  if (!formCache?.[category]?.[step]) return [];
-  return formCache[category][step].fields.map(f => f.key);
+function getActiveCommands() {
+  return commandMap;
 }
 
 function getLastLoadedAt() {
@@ -130,16 +177,18 @@ function getLastLoadedAt() {
 }
 
 function isLoaded() {
-  return formCache !== null;
+  return formCache.size > 0;
 }
 
 module.exports = {
   loadFormConfig,
-  buildModal,
-  getPersonalModal,
-  getCategoryModal,
-  getCategoryStepCount,
-  getFieldKeys,
+  getFormById,
+  getFormByCommand,
+  getModalForStep,
+  getStepCount,
+  getFieldKeysForStep,
+  getAllActiveForms,
+  getActiveCommands,
   getLastLoadedAt,
   isLoaded,
 };

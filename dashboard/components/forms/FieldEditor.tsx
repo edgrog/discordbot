@@ -1,6 +1,6 @@
 "use client";
 
-import { FormConfig, FormField } from "@/lib/types";
+import { FormStep, FormField } from "@/lib/types";
 import { FieldCard } from "./FieldCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 
 interface FieldEditorProps {
-  config: FormConfig;
+  step: FormStep;
   onTitleChange: (title: string) => void;
   onFieldsChange: (fields: FormField[]) => void;
 }
@@ -32,7 +32,7 @@ const MAX_FIELDS = 5;
 const MAX_TITLE_LENGTH = 45;
 
 export function FieldEditor({
-  config,
+  step,
   onTitleChange,
   onFieldsChange,
 }: FieldEditorProps) {
@@ -47,28 +47,28 @@ export function FieldEditor({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = config.fields.findIndex((f) => f.key === active.id);
-    const newIndex = config.fields.findIndex((f) => f.key === over.id);
+    const oldIndex = step.fields.findIndex((f) => f.key === active.id);
+    const newIndex = step.fields.findIndex((f) => f.key === over.id);
 
-    onFieldsChange(arrayMove(config.fields, oldIndex, newIndex));
+    onFieldsChange(arrayMove(step.fields, oldIndex, newIndex));
   }
 
   function updateField(key: string, updates: Partial<FormField>) {
     onFieldsChange(
-      config.fields.map((f) => (f.key === key ? { ...f, ...updates } : f))
+      step.fields.map((f) => (f.key === key ? { ...f, ...updates } : f))
     );
   }
 
   function removeField(key: string) {
-    onFieldsChange(config.fields.filter((f) => f.key !== key));
+    onFieldsChange(step.fields.filter((f) => f.key !== key));
   }
 
   function addField() {
-    if (config.fields.length >= MAX_FIELDS) return;
+    if (step.fields.length >= MAX_FIELDS) return;
 
     const newKey = `field_${Date.now()}`;
     onFieldsChange([
-      ...config.fields,
+      ...step.fields,
       {
         key: newKey,
         label: "New Field",
@@ -78,7 +78,7 @@ export function FieldEditor({
     ]);
   }
 
-  const atLimit = config.fields.length >= MAX_FIELDS;
+  const atLimit = step.fields.length >= MAX_FIELDS;
 
   return (
       <div className="space-y-6">
@@ -90,16 +90,16 @@ export function FieldEditor({
             </label>
             <span
               className={`text-xs font-bold ${
-                config.step_title.length >= MAX_TITLE_LENGTH
+                step.title.length >= MAX_TITLE_LENGTH
                   ? "text-pop-pink font-black"
                   : "text-ink/40"
               }`}
             >
-              {config.step_title.length}/{MAX_TITLE_LENGTH}
+              {step.title.length}/{MAX_TITLE_LENGTH}
             </span>
           </div>
           <Input
-            value={config.step_title}
+            value={step.title}
             onChange={(e) =>
               onTitleChange(e.target.value.slice(0, MAX_TITLE_LENGTH))
             }
@@ -114,11 +114,11 @@ export function FieldEditor({
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={config.fields.map((f) => f.key)}
+            items={step.fields.map((f) => f.key)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-3">
-              {config.fields.map((field) => (
+              {step.fields.map((field) => (
                 <FieldCard
                   key={field.key}
                   field={field}

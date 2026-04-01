@@ -40,7 +40,7 @@ function createHttpApi({ supabase, client, log, reloadForms }) {
     });
   });
 
-  // ── Reload Forms ─────────────────────────────────────────────────────────
+  // ── Reload Forms + Re-register Commands ─────────────────────────────────
 
   app.post('/api/reload-forms', async (req, res) => {
     try {
@@ -53,87 +53,81 @@ function createHttpApi({ supabase, client, log, reloadForms }) {
     }
   });
 
-  // ── Approve Application ──────────────────────────────────────────────────
+  // ── Approve Submission ──────────────────────────────────────────────────
 
-  app.post('/api/applications/:id/approve', async (req, res) => {
+  app.post('/api/submissions/:id/approve', async (req, res) => {
     try {
       const { id } = req.params;
       const { reviewerName, note } = req.body;
 
-      // Race condition guard
-      const { data: app, error: fetchErr } = await supabase
-        .from('partner_applications')
+      // Fetch submission
+      const { data: submission, error: fetchErr } = await supabase
+        .from('submissions')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (fetchErr || !app) {
-        return res.status(404).json({ ok: false, error: 'Application not found' });
+      if (fetchErr || !submission) {
+        return res.status(404).json({ ok: false, error: 'Submission not found' });
       }
 
-      if (app.status !== 'pending') {
+      if (submission.status !== 'pending') {
         return res.json({
           ok: false,
           error: 'already_reviewed',
-          currentStatus: app.status,
+          currentStatus: submission.status,
         });
       }
 
       // Update DB
-      const updateData = {
-        status: 'approved',
-        reviewed_by: reviewerName || 'Dashboard',
-        review_note: note || null,
-      };
-
       const { error: updateErr } = await supabase
-        .from('partner_applications')
-        .update(updateData)
+        .from('submissions')
+        .update({
+          status: 'approved',
+          reviewed_by: reviewerName || 'Dashboard',
+          review_note: note || null,
+        })
         .eq('id', id);
 
       if (updateErr) {
         return res.status(500).json({ ok: false, error: updateErr.message });
       }
 
-      log('info', 'Application approved via API', { appId: id, reviewer: reviewerName });
+      log('info', 'Submission approved via API', { submissionId: id, reviewer: reviewerName });
+
+      // Load form settings for role_id and DM templates
+      let formSettings = {};
+      if (submission.form_id) {
+        const { getFormById } = require('./dynamic-forms');
+        const entry = getFormById(submission.form_id);
+        formSettings = entry?.form?.settings || {};
+      }
 
       // Assign Discord role
-      const roleKeys = { bar: 'role_id_bar', club: 'role_id_club', artist: 'role_id_artist', creator: 'role_id_creator' };
-      const { data: roleSetting } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', roleKeys[app.category])
-        .single();
-
-      const roleId = roleSetting?.value;
+      const roleId = formSettings.role_id || process.env.PARTNER_ROLE_ID;
       let roleAssigned = false;
 
       if (roleId) {
         try {
           const guild = client.guilds.cache.first();
           if (guild) {
-            const member = await guild.members.fetch(app.discord_id);
+            const member = await guild.members.fetch(submission.discord_id);
             await member.roles.add(roleId);
             roleAssigned = true;
-            log('info', 'Role assigned via API', { userId: app.discord_id, roleId });
+            log('info', 'Role assigned via API', { userId: submission.discord_id, roleId });
           }
         } catch (err) {
           const hint = err.code === 50013
-            ? 'Bot role must be above partner roles in Server Settings → Roles.'
+            ? 'Bot role must be above the target role in Server Settings > Roles.'
             : err.message;
           log('error', 'Role assignment failed via API', { err: err.message, code: err.code });
 
           // Alert admin channel
-          const { data: channelSetting } = await supabase
-            .from('settings')
-            .select('value')
-            .eq('key', 'admin_channel_id')
-            .single();
-
-          if (channelSetting?.value) {
-            const ch = client.channels.cache.get(channelSetting.value);
+          const adminChannelId = formSettings.admin_channel_id || process.env.ADMIN_CHANNEL_ID;
+          if (adminChannelId) {
+            const ch = client.channels.cache.get(adminChannelId);
             if (ch) {
-              await ch.send(`⚠️ **Role assignment failed** for <@${app.discord_id}> (App \`${id}\`) — ${hint} Please assign manually.`).catch(() => {});
+              await ch.send(`Warning: Role assignment failed for <@${submission.discord_id}> (Submission \`${id}\`) — ${hint}. Please assign manually.`).catch(() => {});
             }
           }
         }
@@ -142,31 +136,23 @@ function createHttpApi({ supabase, client, log, reloadForms }) {
       // DM applicant
       let dmSent = false;
       try {
-        const { data: templateSetting } = await supabase
-          .from('settings')
-          .select('value')
-          .eq('key', 'dm_approve_template')
-          .single();
-
-        let message = templateSetting?.value ||
-          "🍋 **You're in!**\n\nWelcome to the Grog Partner Program! Your private channels are now unlocked.\n\nLet's cook something fun together 🍹";
-
-        message = message.replace(/\{name\}/g, app.full_name || 'there');
+        let message = formSettings.dm_approve_message
+          || 'Your submission has been approved! Welcome aboard.';
 
         if (note) {
-          message += `\n\n📝 Note from the team: ${note}`;
+          message += `\n\nNote from the team: ${note}`;
         }
 
-        const targetUser = await client.users.fetch(app.discord_id);
+        const targetUser = await client.users.fetch(submission.discord_id);
         await targetUser.send(message);
         dmSent = true;
       } catch (err) {
-        log('warn', 'Could not DM applicant via API', { userId: app.discord_id });
+        log('warn', 'Could not DM applicant via API', { userId: submission.discord_id });
       }
 
       // Update dm_sent
       await supabase
-        .from('partner_applications')
+        .from('submissions')
         .update({ dm_sent: dmSent })
         .eq('id', id);
 
@@ -177,35 +163,35 @@ function createHttpApi({ supabase, client, log, reloadForms }) {
     }
   });
 
-  // ── Reject Application ───────────────────────────────────────────────────
+  // ── Reject Submission ───────────────────────────────────────────────────
 
-  app.post('/api/applications/:id/reject', async (req, res) => {
+  app.post('/api/submissions/:id/reject', async (req, res) => {
     try {
       const { id } = req.params;
       const { reviewerName, note } = req.body;
 
-      // Race condition guard
-      const { data: app, error: fetchErr } = await supabase
-        .from('partner_applications')
+      // Fetch submission
+      const { data: submission, error: fetchErr } = await supabase
+        .from('submissions')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (fetchErr || !app) {
-        return res.status(404).json({ ok: false, error: 'Application not found' });
+      if (fetchErr || !submission) {
+        return res.status(404).json({ ok: false, error: 'Submission not found' });
       }
 
-      if (app.status !== 'pending') {
+      if (submission.status !== 'pending') {
         return res.json({
           ok: false,
           error: 'already_reviewed',
-          currentStatus: app.status,
+          currentStatus: submission.status,
         });
       }
 
       // Update DB
       const { error: updateErr } = await supabase
-        .from('partner_applications')
+        .from('submissions')
         .update({
           status: 'rejected',
           reviewed_by: reviewerName || 'Dashboard',
@@ -217,36 +203,36 @@ function createHttpApi({ supabase, client, log, reloadForms }) {
         return res.status(500).json({ ok: false, error: updateErr.message });
       }
 
-      log('info', 'Application rejected via API', { appId: id, reviewer: reviewerName });
+      log('info', 'Submission rejected via API', { submissionId: id, reviewer: reviewerName });
+
+      // Load form settings for DM template
+      let formSettings = {};
+      if (submission.form_id) {
+        const { getFormById } = require('./dynamic-forms');
+        const entry = getFormById(submission.form_id);
+        formSettings = entry?.form?.settings || {};
+      }
 
       // DM applicant
       let dmSent = false;
       try {
-        const { data: templateSetting } = await supabase
-          .from('settings')
-          .select('value')
-          .eq('key', 'dm_reject_template')
-          .single();
-
-        let message = templateSetting?.value ||
-          "Hey! Thanks for applying to the Grog Partner Program.\n\nUnfortunately we're not moving forward right now — but keep your eyes open, things change fast. Keep drinking Grog 🍊";
-
-        message = message.replace(/\{name\}/g, app.full_name || 'there');
+        let message = formSettings.dm_reject_message
+          || 'Thank you for your submission. Unfortunately, we are not moving forward at this time.';
 
         if (note) {
-          message += `\n\n📝 Note from the team: ${note}`;
+          message += `\n\nNote from the team: ${note}`;
         }
 
-        const targetUser = await client.users.fetch(app.discord_id);
+        const targetUser = await client.users.fetch(submission.discord_id);
         await targetUser.send(message);
         dmSent = true;
       } catch (err) {
-        log('warn', 'Could not DM applicant via API', { userId: app.discord_id });
+        log('warn', 'Could not DM applicant via API', { userId: submission.discord_id });
       }
 
       // Update dm_sent
       await supabase
-        .from('partner_applications')
+        .from('submissions')
         .update({ dm_sent: dmSent })
         .eq('id', id);
 

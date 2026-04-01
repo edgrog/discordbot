@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GROG PARTNER BOT — Rebuilt with Dynamic Forms + HTTP API
+// GROG PARTNER BOT — Multi-Form Architecture with Dynamic Commands
 // ─────────────────────────────────────────────────────────────────────────────
 
 const {
@@ -9,7 +9,6 @@ const {
   Routes,
   SlashCommandBuilder,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
@@ -18,28 +17,24 @@ const {
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-const { loadFormConfig, getPersonalModal, getCategoryModal, getCategoryStepCount, getFieldKeys } = require('./lib/dynamic-forms');
+const {
+  loadFormConfig,
+  getFormById,
+  getFormByCommand,
+  getModalForStep,
+  getStepCount,
+  getFieldKeysForStep,
+  getActiveCommands,
+} = require('./lib/dynamic-forms');
 const { startSignalPoller } = require('./lib/signal-poller');
 const { createHttpApi } = require('./lib/http-api');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const REAPPLY_DAYS             = 90;
 const SESSION_TTL_MS           = 30 * 60 * 1000;
 const SESSION_CLEANUP_INTERVAL = 5  * 60 * 1000;
 const EMBED_FIELD_MAX          = 1024;
 const HEARTBEAT_INTERVAL       = 60 * 1000;
-
-const CATEGORY_LABELS = {
-  bar:     'Bar / Club / Liquor Store',
-  club:    'Club / Community Organiser',
-  artist:  'Artist / Creative Professional',
-  creator: 'Content Creator / Streamer',
-};
-
-const CATEGORY_EMOJIS = {
-  bar: '🍺', club: '🎉', artist: '🎨', creator: '🎥',
-};
 
 // ─── Env Validation ───────────────────────────────────────────────────────────
 
@@ -67,19 +62,19 @@ function log(level, msg, meta = {}) {
 }
 
 // ─── Session Store ────────────────────────────────────────────────────────────
+// Sessions track multi-step modal flows: { formId, step, answers, expiresAt }
 
 const sessions = new Map();
 
 function setSession(userId, data) {
-  const prev = sessions.get(userId) || { data: {}, expiresAt: 0 };
-  sessions.set(userId, { data: { ...prev.data, ...data }, expiresAt: Date.now() + SESSION_TTL_MS });
+  sessions.set(userId, { ...data, expiresAt: Date.now() + SESSION_TTL_MS });
 }
 
 function getSession(userId) {
   const s = sessions.get(userId);
-  if (!s) return {};
-  if (Date.now() > s.expiresAt) { sessions.delete(userId); return {}; }
-  return s.data;
+  if (!s) return null;
+  if (Date.now() > s.expiresAt) { sessions.delete(userId); return null; }
+  return s;
 }
 
 function clearSession(userId) { sessions.delete(userId); }
@@ -100,29 +95,6 @@ function truncate(str, max = EMBED_FIELD_MAX) {
   return s.length > max ? s.slice(0, max - 3) + '...' : s;
 }
 
-function parseAge(dobStr) {
-  if (!dobStr) return null;
-  const m = dobStr.trim().match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
-  if (!m) return null;
-  const [, dd, mm, yyyy] = m;
-  const dob = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
-  if (dob.getFullYear() !== parseInt(yyyy) || dob.getMonth() !== parseInt(mm) - 1 || dob.getDate() !== parseInt(dd)) return null;
-  const now = new Date();
-  let age = now.getFullYear() - dob.getFullYear();
-  if (now.getMonth() < dob.getMonth() || (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate())) age--;
-  return age;
-}
-
-function reapplyDateStr(createdAt) {
-  const d = new Date(new Date(createdAt).getTime() + REAPPLY_DAYS * 86400000);
-  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function daysUntilReapply(createdAt) {
-  const elapsed = Date.now() - new Date(createdAt).getTime();
-  return Math.ceil(REAPPLY_DAYS - elapsed / 86400000);
-}
-
 async function alertAdmin(message) {
   try {
     const ch = client.channels.cache.get(process.env.ADMIN_CHANNEL_ID);
@@ -130,176 +102,136 @@ async function alertAdmin(message) {
   } catch (err) { log('error', 'Failed to send admin alert', { err: err.message }); }
 }
 
-// ─── Application Status Lookup ────────────────────────────────────────────────
+// ─── Command Registration ─────────────────────────────────────────────────────
 
-async function getExistingApplications(discordId) {
-  const { data, error } = await supabase
-    .from('partner_applications')
-    .select('category, status, created_at')
-    .eq('discord_id', discordId)
-    .order('created_at', { ascending: false });
+async function registerCommands() {
+  const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
 
-  if (error) { log('error', 'Failed to fetch existing applications', { discordId, error: error.message }); return null; }
+  const commands = [];
 
-  const map = {};
-  for (const row of data) { if (!map[row.category]) map[row.category] = row; }
-  return map;
-}
-
-function buildOptionDescription(category, existingApps) {
-  if (!existingApps) return undefined;
-  const ex = existingApps[category];
-  if (!ex) return undefined;
-  if (ex.status === 'pending')  return '⏳ Application pending review';
-  if (ex.status === 'approved') return '✅ Already a partner';
-  if (ex.status === 'rejected') {
-    const days = daysUntilReapply(ex.created_at);
-    return days > 0
-      ? `🔒 Reapply available ${reapplyDateStr(ex.created_at)}`
-      : '🔄 Eligible to reapply';
+  // One command per active form
+  for (const [cmdName, formId] of getActiveCommands()) {
+    const { form } = getFormById(formId);
+    commands.push(
+      new SlashCommandBuilder()
+        .setName(cmdName)
+        .setDescription((form.description || `Fill out ${form.name}`).slice(0, 100))
+        .toJSON()
+    );
   }
-  return undefined;
+
+  // Admin reload command
+  commands.push(
+    new SlashCommandBuilder()
+      .setName('reload-forms')
+      .setDescription('Reload form config from database (admin only)')
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+      .toJSON()
+  );
+
+  await rest.put(
+    Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+    { body: commands }
+  );
+
+  log('info', 'Slash commands registered', { count: commands.length, names: commands.map(c => c.name) });
 }
 
-// ─── Embed Field Builder ──────────────────────────────────────────────────────
+// ─── Finalize Submission ──────────────────────────────────────────────────────
 
-function getCategoryFields(data) {
-  switch (data.category) {
-    case 'bar': return [
-      { name: '🏠 Establishment', value: truncate(data.estab_name),      inline: true },
-      { name: '📍 Venue City',    value: truncate(data.estab_city),      inline: true },
-      { name: '🏷️ Type',         value: truncate(data.estab_type),      inline: true },
-      { name: '📦 Stocks Grog?', value: truncate(data.stocks_grog),     inline: true },
-      { name: '📣 Promo Ideas',  value: truncate(data.promo_activities) },
-    ];
-    case 'club': return [
-      { name: '🎉 Club Name',      value: truncate(data.club_name),       inline: true },
-      { name: '🏷️ Type',          value: truncate(data.club_type),       inline: true },
-      { name: '👥 Members',        value: truncate(data.member_count),    inline: true },
-      { name: '📅 Freq',           value: truncate(data.event_frequency), inline: true },
-      { name: '📋 Activities',     value: truncate(data.club_activities) },
-      { name: '🤝 How Grog Helps', value: truncate(data.grog_help) },
-    ];
-    case 'artist': return [
-      { name: '🎨 Artist Name', value: truncate(data.artist_name),    inline: true },
-      { name: '🖌️ Mediums',    value: truncate(data.mediums),        inline: true },
-      { name: '🔗 Portfolio',   value: truncate(data.portfolio_link) },
-      { name: '📱 Social',      value: truncate(data.social_link) },
-    ];
-    case 'creator': return [
-      { name: '🎥 Creator',   value: truncate(data.creator_name),         inline: true },
-      { name: '📱 Platforms', value: truncate(data.platforms),            inline: true },
-      { name: '👥 Followers', value: truncate(data.follower_count),       inline: true },
-      { name: '🎯 Niche',     value: truncate(data.niche),               inline: true },
-      { name: '🔗 Channels',  value: truncate(data.channel_links) },
-      { name: '👤 Audience',  value: truncate(data.audience_description) },
-      { name: '📹 Content Types', value: truncate(data.content_types) },
-    ];
-    default: return [];
+async function finalizeSubmission(interaction, userId, formId) {
+  const session = getSession(userId);
+  if (!session) {
+    await interaction.reply({ content: 'Your session expired. Please start over.', ephemeral: true });
+    return;
   }
-}
 
-// ─── Finalize Application ─────────────────────────────────────────────────────
+  const entry = getFormById(formId);
+  if (!entry) {
+    await interaction.reply({ content: 'Form not found. Please try again.', ephemeral: true });
+    return;
+  }
 
-async function finalizeApplication(interaction, userId, sessionData) {
-  const { data: app, error } = await supabase
-    .from('partner_applications')
-    .insert([{
-      discord_id:       userId,
+  const { form } = entry;
+
+  // Insert into submissions table
+  const { data: submission, error } = await supabase
+    .from('submissions')
+    .insert({
+      form_id: formId,
+      discord_id: userId,
       discord_username: interaction.user.tag,
-      full_name:        sessionData.full_name,
-      email:            sessionData.email,
-      phone:            sessionData.phone,
-      dob:              sessionData.dob,
-      address:          sessionData.address,
-      city:             sessionData.city,
-      state:            sessionData.state,
-      zip:              sessionData.zip,
-      country:          sessionData.country,
-      category:         sessionData.category,
-      answers:          sessionData,
-      status:           'pending',
-      created_at:       new Date().toISOString(),
-    }])
+      answers: session.answers,
+      status: 'pending',
+    })
     .select()
     .single();
 
   if (error) {
-    log('error', 'Supabase insert failed', { userId, error: error.message });
-    await interaction.reply({ content: '❌ Something went wrong saving your application. Please try again or ping the Grog crew.', ephemeral: true });
+    log('error', 'Supabase insert failed', { userId, formId, error: error.message });
+    await interaction.reply({ content: 'Something went wrong saving your submission. Please try again.', ephemeral: true });
     return;
   }
 
-  log('info', 'Application submitted', { appId: app.id, userId, category: sessionData.category });
+  log('info', 'Submission created', { submissionId: submission.id, userId, formId, formName: form.name });
 
-  const location = [sessionData.city, sessionData.state, sessionData.country].filter(Boolean).join(', ') || '—';
+  // Build embed with answers
+  const answerFields = Object.entries(session.answers).map(([key, value]) => ({
+    name: key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    value: truncate(value),
+    inline: String(value).length < 50,
+  }));
 
   const embed = new EmbedBuilder()
     .setColor(0xFFD700)
-    .setTitle(`${CATEGORY_EMOJIS[sessionData.category]} New Partner Application`)
-    .setDescription(`**${CATEGORY_LABELS[sessionData.category]}**`)
-    .addFields(
-      { name: '👤 Name',      value: truncate(sessionData.full_name), inline: true },
-      { name: '🏷️ Discord',  value: `<@${userId}>`,                  inline: true },
-      { name: '📧 Email',    value: truncate(sessionData.email),      inline: true },
-      { name: '📞 Phone',    value: truncate(sessionData.phone),      inline: true },
-      { name: '🎂 DOB',      value: truncate(sessionData.dob),        inline: true },
-      { name: '📍 Location', value: truncate(location),              inline: true },
-      ...getCategoryFields(sessionData),
-    )
-    .setFooter({ text: `Application ID: ${app.id}` })
+    .setTitle(`New Submission: ${form.name}`)
+    .setDescription(`**/${form.discord_command_name}** by <@${userId}>`)
+    .addFields(answerFields.slice(0, 25)) // Discord max 25 fields
+    .setFooter({ text: `Submission ID: ${submission.id} | Form: ${form.name}` })
     .setTimestamp();
 
+  // Approve/reject buttons
   const buttons = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`approve_${app.id}_${userId}`).setLabel('✅ Approve').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`reject_${app.id}_${userId}`).setLabel('❌ Reject').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`approve_${submission.id}_${userId}_${formId}`).setLabel('Approve').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`reject_${submission.id}_${userId}_${formId}`).setLabel('Reject').setStyle(ButtonStyle.Danger),
   );
 
-  const adminChannel = client.channels.cache.get(process.env.ADMIN_CHANNEL_ID);
+  // Post to admin channel (form.settings.admin_channel_id or env fallback)
+  const adminChannelId = form.settings?.admin_channel_id || process.env.ADMIN_CHANNEL_ID;
+  const adminChannel = client.channels.cache.get(adminChannelId);
   if (adminChannel) {
     await adminChannel.send({ embeds: [embed], components: [buttons] });
   } else {
-    log('error', 'Admin channel not found — app saved to DB but no card posted', { appId: app.id });
+    log('error', 'Admin channel not found — submission saved to DB but no card posted', { submissionId: submission.id, adminChannelId });
   }
 
   clearSession(userId);
 
-  await interaction.reply({
-    content: '🍋 **Application submitted!**\nThe Grog crew will review it and get back to you soon. Stay tuned 👀',
-    ephemeral: true,
-  });
+  // Confirmation reply
+  const confirmMsg = form.settings?.confirmation_message || 'Your submission has been received! We will review it and get back to you soon.';
+  await interaction.reply({ content: confirmMsg, ephemeral: true });
 }
-
-// ─── Slash Commands ───────────────────────────────────────────────────────────
-
-const commands = [
-  new SlashCommandBuilder().setName('apply').setDescription('Apply to become a Grog Partner 🍋').toJSON(),
-  new SlashCommandBuilder()
-    .setName('reload-forms')
-    .setDescription('Reload form config from database (admin only)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
-    .toJSON(),
-];
 
 // ─── Bot Ready ────────────────────────────────────────────────────────────────
 
 client.once('ready', async () => {
   log('info', `Bot online as ${client.user.tag}`);
 
-  // Register commands
-  const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
+  // Load dynamic forms
+  await loadFormConfig(supabase, log);
+
+  // Register commands dynamically
   try {
-    await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID), { body: commands });
-    log('info', 'Slash commands registered');
+    await registerCommands();
   } catch (err) {
     log('error', 'Command registration failed', { err: err.message });
   }
 
-  // Load dynamic forms
-  await loadFormConfig(supabase, log);
-
-  // Start signal poller
-  startSignalPoller(supabase, () => loadFormConfig(supabase, log), log);
+  // Start signal poller (reload forms + re-register commands on signal)
+  startSignalPoller(supabase, async () => {
+    await loadFormConfig(supabase, log);
+    await registerCommands();
+  }, log);
 
   // Start heartbeat
   async function heartbeat() {
@@ -317,7 +249,10 @@ client.once('ready', async () => {
     supabase,
     client,
     log,
-    reloadForms: () => loadFormConfig(supabase, log),
+    reloadForms: async () => {
+      await loadFormConfig(supabase, log);
+      await registerCommands();
+    },
   });
   httpApp.listen(port, () => {
     log('info', `HTTP API listening on port ${port}`);
@@ -329,242 +264,137 @@ client.once('ready', async () => {
 client.on('interactionCreate', async (interaction) => {
   const userId = interaction.user.id;
 
-  // ── /apply ────────────────────────────────────────────────────────────────
+  // ── Slash Commands ────────────────────────────────────────────────────────
 
-  if (interaction.isChatInputCommand() && interaction.commandName === 'apply') {
-    await interaction.deferReply({ ephemeral: true });
-
-    const existingApps = await getExistingApplications(userId);
-    setSession(userId, { existingApps });
-
-    const options = [
-      { label: '🎥 Content Creator / Streamer',          value: 'creator' },
-      { label: '🎨 Artist / Creative Professional',      value: 'artist'  },
-      { label: '🎉 Club President / Community Organiser', value: 'club'    },
-      { label: '🍺 Bar / Club / Liquor Store Manager',   value: 'bar'     },
-    ].map(opt => {
-      const desc = buildOptionDescription(opt.value, existingApps);
-      return desc ? { ...opt, description: desc } : opt;
-    });
-
-    await interaction.editReply({
-      content: '## 🍋 Grog Partner Program\nPick your category below to get started.\n\n> 📌 Make sure you\'ve joined our Discord before applying.',
-      components: [new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder().setCustomId('category_select').setPlaceholder('What best describes you?').addOptions(options)
-      )],
-    });
-    return;
-  }
-
-  // ── /reload-forms ─────────────────────────────────────────────────────────
-
-  if (interaction.isChatInputCommand() && interaction.commandName === 'reload-forms') {
-    await interaction.deferReply({ ephemeral: true });
-    const success = await loadFormConfig(supabase, log);
-    await interaction.editReply({
-      content: success
-        ? '✅ Form config reloaded from database.'
-        : '❌ Failed to reload form config. Check bot logs.',
-    });
-    return;
-  }
-
-  // ── Category Select ───────────────────────────────────────────────────────
-
-  if (interaction.isStringSelectMenu() && interaction.customId === 'category_select') {
-    const category     = interaction.values[0];
-    const session      = getSession(userId);
-    const existingApps = session.existingApps !== undefined
-      ? session.existingApps
-      : await getExistingApplications(userId);
-
-    const existing = existingApps?.[category];
-
-    if (existing?.status === 'pending') {
-      await interaction.update({
-        content: `⏳ **You already have a pending application as a ${CATEGORY_LABELS[category]}.**\nWe're reviewing it — sit tight 🍋\n\nIf it's been more than a week, ping us in this server.`,
-        components: [],
-      });
+  if (interaction.isChatInputCommand()) {
+    // Admin reload
+    if (interaction.commandName === 'reload-forms') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        await loadFormConfig(supabase, log);
+        await registerCommands();
+        await interaction.editReply({ content: 'Form config reloaded and commands re-registered.' });
+      } catch (err) {
+        log('error', 'Reload failed', { err: err.message });
+        await interaction.editReply({ content: 'Failed to reload form config. Check bot logs.' });
+      }
       return;
     }
 
-    if (existing?.status === 'approved') {
-      await interaction.update({
-        content: `✅ **You're already a Grog ${CATEGORY_LABELS[category]} Partner!**\nCheck your private partner channels 🍹`,
-        components: [],
-      });
-      return;
-    }
-
-    if (existing?.status === 'rejected') {
-      const days = daysUntilReapply(existing.created_at);
-      if (days > 0) {
-        await interaction.update({
-          content: `🔒 **You're not eligible to reapply as a ${CATEGORY_LABELS[category]} yet.**\nYou can reapply after **${reapplyDateStr(existing.created_at)}** (${days} days away).\n\nIn the meantime, keep spreading the Grog love 🍊`,
-          components: [],
-        });
+    // Dynamic form commands
+    const formId = getFormByCommand(interaction.commandName);
+    if (formId) {
+      const totalSteps = getStepCount(formId);
+      if (totalSteps === 0) {
+        await interaction.reply({ content: 'This form has no steps configured yet.', ephemeral: true });
         return;
       }
-    }
 
-    setSession(userId, { category, existingApps });
-    const modal = getPersonalModal(1, category);
-    if (!modal) {
-      await interaction.update({ content: '❌ Form config not loaded. Try again in a moment.', components: [] });
+      // Create session and show first modal
+      setSession(userId, { formId, step: 0, answers: {} });
+
+      const modal = getModalForStep(formId, 0);
+      if (!modal) {
+        await interaction.reply({ content: 'Form configuration error. Please try again later.', ephemeral: true });
+        return;
+      }
+
+      await interaction.showModal(modal);
       return;
     }
-    await interaction.showModal(modal);
+
     return;
   }
 
   // ── Modal Submissions ─────────────────────────────────────────────────────
 
   if (interaction.isModalSubmit()) {
-    const id = interaction.customId;
-    const f  = interaction.fields;
+    const customId = interaction.customId;
 
-    const guardSession = async (requiredKey = 'category') => {
-      const s = getSession(userId);
-      if (!s[requiredKey]) {
-        await interaction.reply({ content: '❌ **Your session expired.** Run `/apply` to start again — sorry about that!', ephemeral: true });
-        return null;
-      }
-      return s;
-    };
+    // Parse customId: form_<formId>_<stepIndex>
+    const match = customId.match(/^form_(.+)_(\d+)$/);
+    if (!match) return;
 
-    // ── Personal Step 1 ────────────────────────────────────────────────────
+    const formId    = match[1];
+    const stepIndex = parseInt(match[2]);
 
-    if (id.startsWith('personal_1_')) {
-      const category = id.replace('personal_1_', '');
-
-      // Age validation (hardcoded)
-      const dobRaw = f.getTextInputValue('dob').trim();
-      const age    = parseAge(dobRaw);
-      if (age === null) {
-        await interaction.reply({ content: '❌ **Invalid date format.** Please use DD/MM/YYYY (e.g. `15/03/1995`).\nRun `/apply` to start again.', ephemeral: true });
-        clearSession(userId);
-        return;
-      }
-      if (age < 21) {
-        await interaction.reply({ content: '❌ **You must be 21 or older to apply for the Grog Partner Program.** Come back when you\'re of age 🍋', ephemeral: true });
-        clearSession(userId);
-        return;
-      }
-
-      // Email validation (hardcoded)
-      const email = f.getTextInputValue('email').trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        await interaction.reply({ content: '❌ **That doesn\'t look like a valid email address.** Run `/apply` to try again.', ephemeral: true });
-        clearSession(userId);
-        return;
-      }
-
-      // Collect all fields from personal step 1 dynamically
-      const fieldKeys = getFieldKeys('personal', 1);
-      const stepData = { category };
-      for (const key of fieldKeys) {
-        try { stepData[key] = f.getTextInputValue(key).trim(); } catch { /* field might not exist */ }
-      }
-
-      setSession(userId, stepData);
-      const nextModal = getPersonalModal(2, category);
-      if (nextModal) {
-        await interaction.showModal(nextModal);
-      }
+    const session = getSession(userId);
+    if (!session || session.formId !== formId) {
+      await interaction.reply({ content: 'Your session expired. Please start the form again.', ephemeral: true });
       return;
     }
 
-    // ── Personal Step 2 → route to category ────────────────────────────────
-
-    if (id.startsWith('personal_2_')) {
-      const category = id.replace('personal_2_', '');
-      if (!(await guardSession('full_name'))) return;
-
-      const fieldKeys = getFieldKeys('personal', 2);
-      const stepData = {};
-      for (const key of fieldKeys) {
-        try { stepData[key] = f.getTextInputValue(key).trim(); } catch { /* optional */ }
-      }
-
-      setSession(userId, stepData);
-
-      const catModal = getCategoryModal(category, 1);
-      if (catModal) {
-        await interaction.showModal(catModal);
-      } else {
-        log('warn', 'No category modal found', { category, step: 1 });
-        await interaction.reply({ content: '❌ Form config error. Contact the Grog crew.', ephemeral: true });
-        clearSession(userId);
-      }
-      return;
-    }
-
-    // ── Category Steps (dynamic) ───────────────────────────────────────────
-
-    const catMatch = id.match(/^cat_(\w+)_(\d+)$/);
-    if (catMatch) {
-      const category = catMatch[1];
-      const step     = parseInt(catMatch[2]);
-
-      if (!(await guardSession())) return;
-
-      // Collect fields dynamically
-      const fieldKeys = getFieldKeys(category, step);
-      const stepData = {};
-      for (const key of fieldKeys) {
-        try { stepData[key] = f.getTextInputValue(key).trim(); } catch { /* optional */ }
-      }
-      setSession(userId, stepData);
-
-      const totalSteps = getCategoryStepCount(category);
-
-      if (step < totalSteps) {
-        // More steps to go
-        const nextModal = getCategoryModal(category, step + 1);
-        if (nextModal) {
-          await interaction.showModal(nextModal);
-        } else {
-          await finalizeApplication(interaction, userId, getSession(userId));
+    // Collect field values from this step
+    const fieldKeys = getFieldKeysForStep(formId, stepIndex);
+    for (const key of fieldKeys) {
+      try {
+        const value = interaction.fields.getTextInputValue(key);
+        if (value !== undefined && value !== null) {
+          session.answers[key] = value.trim();
         }
-      } else {
-        // Final step — submit
-        await finalizeApplication(interaction, userId, getSession(userId));
-      }
-      return;
+      } catch { /* field might be optional or missing */ }
     }
+
+    // Update session with new step and answers
+    const totalSteps = getStepCount(formId);
+    const nextStep   = stepIndex + 1;
+
+    if (nextStep < totalSteps) {
+      // More steps to go — show next modal
+      session.step = nextStep;
+      setSession(userId, session);
+
+      const nextModal = getModalForStep(formId, nextStep);
+      if (!nextModal) {
+        // No modal for next step — finalize
+        await finalizeSubmission(interaction, userId, formId);
+        return;
+      }
+
+      await interaction.showModal(nextModal);
+    } else {
+      // Last step — finalize
+      setSession(userId, session); // save final answers
+      await finalizeSubmission(interaction, userId, formId);
+    }
+
+    return;
   }
 
   // ── Approve / Reject Buttons ──────────────────────────────────────────────
 
   if (interaction.isButton()) {
-    const parts        = interaction.customId.split('_');
+    const parts = interaction.customId.split('_');
+    // Format: approve_<submissionId>_<targetUserId>_<formId>
+    // or:     reject_<submissionId>_<targetUserId>_<formId>
     const action       = parts[0];
-    const appId        = parts[1];
+    const submissionId = parts[1];
     const targetUserId = parts[2];
+    const formId       = parts[3];
 
     if (action !== 'approve' && action !== 'reject') return;
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageRoles)) {
-      await interaction.reply({ content: '❌ You don\'t have permission to review applications.', ephemeral: true });
+      await interaction.reply({ content: 'You do not have permission to review submissions.', ephemeral: true });
       return;
     }
 
     // Race condition guard
-    const { data: currentApp, error: fetchErr } = await supabase
-      .from('partner_applications')
-      .select('id, status, category, discord_id')
-      .eq('id', appId)
+    const { data: currentSub, error: fetchErr } = await supabase
+      .from('submissions')
+      .select('id, status, form_id, discord_id')
+      .eq('id', submissionId)
       .single();
 
-    if (fetchErr || !currentApp) {
-      log('error', 'Could not fetch app for review', { appId, err: fetchErr?.message });
-      await interaction.reply({ content: '❌ Could not find that application in the database.', ephemeral: true });
+    if (fetchErr || !currentSub) {
+      log('error', 'Could not fetch submission for review', { submissionId, err: fetchErr?.message });
+      await interaction.reply({ content: 'Could not find that submission in the database.', ephemeral: true });
       return;
     }
 
-    if (currentApp.status !== 'pending') {
+    if (currentSub.status !== 'pending') {
       await interaction.reply({
-        content: `⚠️ This application was already **${currentApp.status}**. No changes made.`,
+        content: `This submission was already **${currentSub.status}**. No changes made.`,
         ephemeral: true,
       });
       return;
@@ -572,25 +402,28 @@ client.on('interactionCreate', async (interaction) => {
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
     const { error: updateErr } = await supabase
-      .from('partner_applications')
+      .from('submissions')
       .update({ status: newStatus, reviewed_by: interaction.user.tag })
-      .eq('id', appId);
+      .eq('id', submissionId);
 
     if (updateErr) {
-      log('error', 'Supabase update failed on review', { appId, err: updateErr.message });
-      await interaction.reply({ content: '❌ Database update failed. Try again.', ephemeral: true });
+      log('error', 'Supabase update failed on review', { submissionId, err: updateErr.message });
+      await interaction.reply({ content: 'Database update failed. Try again.', ephemeral: true });
       return;
     }
 
-    log('info', `Application ${newStatus}`, { appId, reviewer: interaction.user.tag, targetUserId });
+    log('info', `Submission ${newStatus}`, { submissionId, reviewer: interaction.user.tag, targetUserId });
+
+    // Load form settings for role and DM templates
+    const entry = getFormById(formId || currentSub.form_id);
+    const formSettings = entry?.form?.settings || {};
 
     // Role assignment (approve only)
     if (action === 'approve') {
-      const roleEnvKeys = { bar: 'ROLE_BAR', club: 'ROLE_CLUB', artist: 'ROLE_ARTIST', creator: 'ROLE_CREATOR' };
-      const roleId = process.env[roleEnvKeys[currentApp.category]];
+      const roleId = formSettings.role_id || process.env.PARTNER_ROLE_ID;
       if (!roleId) {
-        log('warn', 'No role ID for category', { category: currentApp.category });
-        await alertAdmin(`⚠️ **Role not assigned** for <@${targetUserId}> (App \`${appId}\`) — no role ID configured for \`${currentApp.category}\`. Please assign manually.`);
+        log('warn', 'No role ID configured for form', { formId: formId || currentSub.form_id });
+        await alertAdmin(`Warning: Role not assigned for <@${targetUserId}> (Submission \`${submissionId}\`) — no role_id configured. Please assign manually.`);
       } else {
         try {
           const member = await interaction.guild.members.fetch(targetUserId);
@@ -598,10 +431,10 @@ client.on('interactionCreate', async (interaction) => {
           log('info', 'Role assigned', { userId: targetUserId, roleId });
         } catch (err) {
           const hint = err.code === 50013
-            ? 'Bot role must be **above** partner roles in Server Settings → Roles.'
+            ? 'Bot role must be above the target role in Server Settings > Roles.'
             : err.message;
           log('error', 'Role assignment failed', { err: err.message, code: err.code });
-          await alertAdmin(`⚠️ **Role assignment failed** for <@${targetUserId}> (App \`${appId}\`) — ${hint} Please assign manually.`);
+          await alertAdmin(`Warning: Role assignment failed for <@${targetUserId}> (Submission \`${submissionId}\`) — ${hint}. Please assign manually.`);
         }
       }
     }
@@ -610,27 +443,26 @@ client.on('interactionCreate', async (interaction) => {
     let dmSent = true;
     try {
       const targetUser = await client.users.fetch(targetUserId);
-      await targetUser.send(
-        action === 'approve'
-          ? `🍋 **You're in!**\n\nWelcome to the Grog Partner Program! Your private channels are now unlocked.\n\nLet's cook something fun together 🍹`
-          : `Hey! Thanks for applying to the Grog Partner Program.\n\nUnfortunately we're not moving forward right now — but keep your eyes open, things change fast. Keep drinking Grog 🍊`
-      );
+      const dmMessage = action === 'approve'
+        ? (formSettings.dm_approve_message || 'Your submission has been approved! Welcome aboard.')
+        : (formSettings.dm_reject_message || 'Thank you for your submission. Unfortunately, we are not moving forward at this time.');
+      await targetUser.send(dmMessage);
     } catch (err) {
       dmSent = false;
       log('warn', 'Could not DM applicant — DMs likely closed', { targetUserId });
-      await alertAdmin(`ℹ️ Couldn't DM <@${targetUserId}> after **${newStatus}** (App \`${appId}\`) — they may have DMs closed. Notify them manually if needed.`);
+      await alertAdmin(`Could not DM <@${targetUserId}> after **${newStatus}** (Submission \`${submissionId}\`) — they may have DMs closed.`);
     }
 
     // Update dm_sent
     await supabase
-      .from('partner_applications')
+      .from('submissions')
       .update({ dm_sent: dmSent })
-      .eq('id', appId);
+      .eq('id', submissionId);
 
     // Update the embed
     const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])
       .setColor(action === 'approve' ? 0x00C853 : 0xD50000)
-      .setFooter({ text: `${action === 'approve' ? '✅ APPROVED' : '❌ REJECTED'} by ${interaction.user.tag} • App ID: ${appId}` });
+      .setFooter({ text: `${action === 'approve' ? 'APPROVED' : 'REJECTED'} by ${interaction.user.tag} | Submission ID: ${submissionId}` });
 
     await interaction.update({ embeds: [updatedEmbed], components: [] });
   }

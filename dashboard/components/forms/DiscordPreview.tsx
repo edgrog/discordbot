@@ -1,15 +1,15 @@
 "use client";
 
-import { FormConfig } from "@/lib/types";
+import { FormStep } from "@/lib/types";
 import { Lock } from "lucide-react";
 
 const LOCKED_KEYS = ["dob", "email"];
 
 interface DiscordPreviewProps {
-  config: FormConfig;
+  step: FormStep;
 }
 
-export function DiscordPreview({ config }: DiscordPreviewProps) {
+export function DiscordPreview({ step }: DiscordPreviewProps) {
   return (
     <div className="border-2 border-ink brutalist-shadow overflow-hidden">
       {/* Brutalist label */}
@@ -22,13 +22,13 @@ export function DiscordPreview({ config }: DiscordPreviewProps) {
       {/* Modal Header */}
       <div className="bg-[#2B2D31] px-4 py-3">
         <h3 className="text-white text-sm font-semibold truncate">
-          {config.step_title || "Untitled Step"}
+          {step.title || "Untitled Step"}
         </h3>
       </div>
 
       {/* Modal Body */}
       <div className="bg-[#313338] p-4 space-y-4">
-        {config.fields.map((field) => {
+        {step.fields.map((field) => {
           const isLocked = LOCKED_KEYS.includes(field.key);
 
           return (
@@ -62,7 +62,7 @@ export function DiscordPreview({ config }: DiscordPreviewProps) {
           );
         })}
 
-        {config.fields.length === 0 && (
+        {step.fields.length === 0 && (
           <div className="text-center py-8 text-[#4E5058] text-sm">
             No fields added yet
           </div>

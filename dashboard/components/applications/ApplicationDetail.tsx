@@ -2,18 +2,23 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { PartnerApplication, CategoryType, CATEGORY_LABELS } from "@/lib/types";
+import { Submission } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
-import { CategoryBadge } from "./CategoryBadge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { X } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
 interface ApplicationDetailProps {
-  application: PartnerApplication;
+  application: Submission;
   onClose: () => void;
-  onStatusChange: (id: number, newStatus: string) => void;
+  onStatusChange: (id: string, newStatus: string) => void;
+}
+
+function formatKey(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function ApplicationDetail({
@@ -27,7 +32,7 @@ export function ApplicationDetail({
   async function handleAction(action: "approve" | "reject") {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/applications/${app.id}/${action}`, {
+      const res = await fetch(`/api/submissions/${app.id}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ note: note.trim() || undefined }),
@@ -66,41 +71,12 @@ export function ApplicationDetail({
     }
   }
 
-  // Build personal details
-  const personalFields = [
-    { label: "Email", value: app.email },
-    { label: "Phone", value: app.phone },
-    { label: "Date of Birth", value: app.dob },
-    {
-      label: "Location",
-      value: [app.address, app.city, app.state, app.zip, app.country]
-        .filter(Boolean)
-        .join(", "),
-    },
-  ];
-
-  // Build category answers
-  const skipKeys = new Set([
-    "category",
-    "existingApps",
-    "full_name",
-    "email",
-    "phone",
-    "dob",
-    "address",
-    "city",
-    "state",
-    "zip",
-    "country",
-  ]);
-
-  const categoryAnswers = Object.entries(app.answers || {})
-    .filter(([key]) => !skipKeys.has(key))
-    .map(([key, value]) => ({
-      key,
-      label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      value: String(value),
-    }));
+  // Build all answers dynamically from the jsonb answers field
+  const answerEntries = Object.entries(app.answers || {}).map(([key, value]) => ({
+    key,
+    label: formatKey(key),
+    value: String(value),
+  }));
 
   return (
     <div className="fixed inset-y-0 right-0 w-[500px] bg-chalk border-l-2 border-ink brutalist-shadow z-50 flex flex-col transform transition-transform duration-300">
@@ -108,10 +84,12 @@ export function ApplicationDetail({
       <div className="flex items-center justify-between p-6 border-b-2 border-ink">
         <div>
           <h2 className="text-lg font-black uppercase tracking-wide text-ink">
-            {app.full_name || "Unknown"}
+            {app.discord_username || app.discord_id}
           </h2>
           <div className="flex items-center gap-2 mt-1">
-            <CategoryBadge category={app.category as CategoryType} />
+            <span className="text-xs font-black uppercase tracking-wide text-ink/60">
+              {app.form_name || "Unknown Form"}
+            </span>
             <StatusBadge status={app.status} />
           </div>
         </div>
@@ -145,30 +123,14 @@ export function ApplicationDetail({
           </p>
         </div>
 
-        {/* Personal Details */}
-        <div>
-          <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-3">
-            Personal Details
-          </h3>
-          <div className="space-y-2">
-            {personalFields.map((f) => (
-              <div key={f.label}>
-                <p className="text-xs font-black uppercase tracking-wide text-ink/50">{f.label}</p>
-                <p className="text-sm font-bold text-ink">{f.value || "—"}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Category Answers */}
-        {categoryAnswers.length > 0 && (
+        {/* All Answers */}
+        {answerEntries.length > 0 && (
           <div>
             <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-3">
-              {CATEGORY_LABELS[app.category as CategoryType] || app.category}{" "}
-              Details
+              Answers
             </h3>
             <div className="space-y-2">
-              {categoryAnswers.map((a) => (
+              {answerEntries.map((a) => (
                 <div key={a.key}>
                   <p className="text-xs font-black uppercase tracking-wide text-ink/50">{a.label}</p>
                   <p className="text-sm font-bold text-ink whitespace-pre-wrap">

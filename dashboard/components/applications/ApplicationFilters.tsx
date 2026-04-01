@@ -1,11 +1,12 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { Form } from "@/lib/types";
 import { Search } from "lucide-react";
 
 interface FiltersState {
   status: string;
-  category: string;
+  formId: string;
   search: string;
   dateFrom: string;
   dateTo: string;
@@ -14,22 +15,15 @@ interface FiltersState {
 interface ApplicationFiltersProps {
   filters: FiltersState;
   onChange: (filters: FiltersState) => void;
+  forms: Form[];
 }
 
 const STATUS_OPTIONS = ["all", "pending", "approved", "rejected"];
-const CATEGORY_OPTIONS = ["all", "creator", "artist", "club", "bar"];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  all: "All",
-  creator: "Creator",
-  artist: "Artist",
-  club: "Club",
-  bar: "Bar",
-};
 
 export function ApplicationFilters({
   filters,
   onChange,
+  forms,
 }: ApplicationFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -50,22 +44,19 @@ export function ApplicationFilters({
         ))}
       </div>
 
-      {/* Category Pills */}
-      <div className="flex border-2 border-ink overflow-hidden">
-        {CATEGORY_OPTIONS.map((c) => (
-          <button
-            key={c}
-            onClick={() => onChange({ ...filters, category: c })}
-            className={`px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors border-r-2 border-ink last:border-r-0 ${
-              filters.category === c
-                ? "bg-pop-blue text-white"
-                : "bg-chalk text-ink/60 hover:bg-pop-blue/20"
-            }`}
-          >
-            {CATEGORY_LABELS[c]}
-          </button>
+      {/* Form Selector Dropdown */}
+      <select
+        value={filters.formId}
+        onChange={(e) => onChange({ ...filters, formId: e.target.value })}
+        className="h-8 px-3 text-xs font-black uppercase tracking-wide border-2 border-ink bg-chalk text-ink rounded-none appearance-none cursor-pointer hover:bg-pop-blue/20 transition-colors"
+      >
+        <option value="all">All Forms</option>
+        {forms.map((form) => (
+          <option key={form.id} value={form.id}>
+            {form.name}
+          </option>
         ))}
-      </div>
+      </select>
 
       {/* Date Range */}
       <div className="flex items-center gap-2">
@@ -88,7 +79,7 @@ export function ApplicationFilters({
       <div className="relative flex-1 min-w-48">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
         <Input
-          placeholder="Search name, email, Discord..."
+          placeholder="Search Discord username..."
           value={filters.search}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
           className="pl-9 h-8 text-sm border-2 border-ink rounded-none bg-white font-bold text-ink"

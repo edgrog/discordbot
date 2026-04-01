@@ -1,7 +1,6 @@
 "use client";
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { CATEGORY_COLORS, CATEGORY_LABELS, CategoryType } from "@/lib/types";
 
 interface CategoryChartProps {
   data: Record<string, number>;
@@ -10,10 +9,10 @@ interface CategoryChartProps {
 const CHART_COLORS = ["#BFFF00", "#FF3366", "#3366FF", "#FF6B00", "#8B5CF6", "#00D4FF"];
 
 export function CategoryChart({ data }: CategoryChartProps) {
-  const chartData = Object.entries(data).map(([category, count], i) => ({
-    name: CATEGORY_LABELS[category as CategoryType] || category,
+  const chartData = Object.entries(data).map(([name, count], i) => ({
+    name,
     value: count,
-    color: CATEGORY_COLORS[category as CategoryType] || CHART_COLORS[i % CHART_COLORS.length],
+    color: CHART_COLORS[i % CHART_COLORS.length],
   }));
 
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
@@ -23,7 +22,7 @@ export function CategoryChart({ data }: CategoryChartProps) {
       <div className="bg-card border-2 border-ink p-8 text-center brutalist-shadow">
         <div className="text-2xl mb-2 font-black">?</div>
         <h3 className="text-sm font-black text-ink uppercase">
-          Categories
+          Submissions by Form
         </h3>
         <p className="text-xs text-ink/50 mt-1">No data yet</p>
       </div>
@@ -33,7 +32,7 @@ export function CategoryChart({ data }: CategoryChartProps) {
   return (
     <div className="bg-card border-2 border-ink p-5 brutalist-shadow">
       <h3 className="text-sm font-black text-ink uppercase tracking-wide mb-4">
-        Categories
+        Submissions by Form
       </h3>
 
       <ResponsiveContainer width="100%" height={200}>
