@@ -1,26 +1,12 @@
-import { redirect } from "next/navigation";
-import { createServerClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shared/Sidebar";
 
+// TODO: TEMPORARY — auth bypassed for testing. Re-enable before production.
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: dashUser } = await supabase
-    .from("dashboard_users")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (!dashUser) redirect("/login?error=access_denied");
+  const dashUser = { email: "ed@grog.shop", name: "Ed", role: "admin" as const };
 
   return (
     <div className="min-h-screen bg-page">
