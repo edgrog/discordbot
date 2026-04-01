@@ -26,13 +26,13 @@ import { format } from "date-fns";
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
 
 const ACTION_COLORS: Record<string, string> = {
-  approve: "bg-green-50 text-green-700 border-green-200",
-  reject: "bg-red-50 text-red-700 border-red-200",
-  form_edit: "bg-blue-50 text-blue-700 border-blue-200",
-  user_invite: "bg-violet-50 text-violet-700 border-violet-200",
-  user_remove: "bg-orange-50 text-orange-700 border-orange-200",
-  settings_update: "bg-gray-50 text-gray-700 border-gray-200",
-  user_role_change: "bg-amber-50 text-amber-700 border-amber-200",
+  approve: "bg-[#BFFF00]/20 text-ink border-2 border-ink font-bold",
+  reject: "bg-[#FF3366]/20 text-ink border-2 border-ink font-bold",
+  form_edit: "bg-[#3366FF]/20 text-ink border-2 border-ink font-bold",
+  user_invite: "bg-[#8B5CF6]/20 text-ink border-2 border-ink font-bold",
+  user_remove: "bg-[#FF6B00]/20 text-ink border-2 border-ink font-bold",
+  settings_update: "bg-chalk text-ink border-2 border-ink font-bold",
+  user_role_change: "bg-[#00D4FF]/20 text-ink border-2 border-ink font-bold",
 };
 
 const PAGE_SIZE = 50;
@@ -73,10 +73,10 @@ export default function AuditPage() {
   }
 
   function renderMeta(meta: Record<string, unknown> | null) {
-    if (!meta) return <span className="text-gray-400">No details</span>;
+    if (!meta) return <span className="text-ink/40 font-bold">No details</span>;
 
     return (
-      <pre className="text-xs bg-gray-50 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap">
+      <pre className="font-mono text-xs bg-ink text-[#BFFF00] p-3 overflow-x-auto whitespace-pre-wrap border-2 border-ink">
         {JSON.stringify(meta, null, 2)}
       </pre>
     );
@@ -84,8 +84,13 @@ export default function AuditPage() {
 
   return (
     <div>
-      <PageHeader title="Audit Log" description="Track all dashboard actions">
-        <Button variant="outline" size="sm" onClick={() => {/* TODO: export */}}>
+      <PageHeader title="Audit Log" description="Track all Formie dashboard actions">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {/* TODO: export */}}
+          className="border-2 border-ink rounded-none font-black uppercase text-xs hover:bg-ink hover:text-white transition-colors"
+        >
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
@@ -94,7 +99,7 @@ export default function AuditPage() {
       {/* Filters */}
       <div className="flex items-center gap-4 mb-6">
         <Select value={actionFilter} onValueChange={(v) => v && setActionFilter(v)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40 border-2 border-ink rounded-none font-bold text-xs uppercase">
             <SelectValue placeholder="Action type" />
           </SelectTrigger>
           <SelectContent>
@@ -112,27 +117,27 @@ export default function AuditPage() {
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className="w-36 h-9"
+          className="w-36 h-9 border-2 border-ink rounded-none font-mono text-xs"
         />
-        <span className="text-xs text-gray-400">to</span>
+        <span className="text-xs font-black uppercase text-ink/40">to</span>
         <Input
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className="w-36 h-9"
+          className="w-36 h-9 border-2 border-ink rounded-none font-mono text-xs"
         />
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-card border-2 border-ink brutalist-shadow overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-b-2 border-ink bg-chalk">
               <TableHead className="w-8"></TableHead>
-              <TableHead>Timestamp</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Target</TableHead>
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Timestamp</TableHead>
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">User</TableHead>
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Action</TableHead>
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Target</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -140,7 +145,7 @@ export default function AuditPage() {
               <>
                 <TableRow
                   key={entry.id}
-                  className="cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer hover:bg-[#BFFF00]/10 border-b border-ink/10 transition-colors"
                   onClick={() =>
                     setExpandedId(
                       expandedId === entry.id ? null : entry.id
@@ -149,33 +154,33 @@ export default function AuditPage() {
                 >
                   <TableCell>
                     {expandedId === entry.id ? (
-                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                      <ChevronDown className="w-4 h-4 text-ink/50" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                      <ChevronRight className="w-4 h-4 text-ink/50" />
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-600 text-sm">
+                  <TableCell className="font-mono text-xs text-ink/70">
                     {format(new Date(entry.created_at), "MMM d, HH:mm:ss")}
                   </TableCell>
-                  <TableCell className="text-gray-600">
+                  <TableCell className="font-mono text-xs text-ink/60">
                     {entry.user_email || "System"}
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={ACTION_COLORS[entry.action] || ""}
+                      className={`rounded-none text-xs uppercase ${ACTION_COLORS[entry.action] || "border-2 border-ink font-bold"}`}
                     >
                       {entry.action}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-600">
+                  <TableCell className="font-mono text-xs text-ink/60">
                     {entry.target_type}
                     {entry.target_id && ` #${entry.target_id}`}
                   </TableCell>
                 </TableRow>
                 {expandedId === entry.id && (
                   <TableRow key={`${entry.id}-detail`}>
-                    <TableCell colSpan={5} className="bg-gray-50">
+                    <TableCell colSpan={5} className="bg-chalk p-4">
                       {renderMeta(entry.meta)}
                     </TableCell>
                   </TableRow>
@@ -184,7 +189,7 @@ export default function AuditPage() {
             ))}
             {entries.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={5} className="text-center py-8 text-ink/40 font-black uppercase tracking-wide">
                   No audit entries found
                 </TableCell>
               </TableRow>
@@ -200,15 +205,17 @@ export default function AuditPage() {
           size="sm"
           disabled={page === 0}
           onClick={() => setPage(page - 1)}
+          className="border-2 border-ink rounded-none font-black uppercase text-xs hover:bg-ink hover:text-white transition-colors"
         >
           Previous
         </Button>
-        <span className="text-sm text-gray-500">Page {page + 1}</span>
+        <span className="text-xs font-black uppercase tracking-wide text-ink/50">Page {page + 1}</span>
         <Button
           variant="outline"
           size="sm"
           disabled={!hasMore}
           onClick={() => setPage(page + 1)}
+          className="border-2 border-ink rounded-none font-black uppercase text-xs hover:bg-ink hover:text-white transition-colors"
         >
           Next
         </Button>

@@ -114,12 +114,13 @@ export function FormEditorClient({ initialData }: FormEditorClientProps) {
 
   return (
     <div className="h-[calc(100vh-4rem)]">
-      <PageHeader title="Form Editor" description="Edit Discord application forms">
+      <PageHeader title="Form Editor" description="Edit Formie application forms">
         <Button
           variant="outline"
           size="sm"
           onClick={pushToBot}
           disabled={isPushing}
+          className="border-2 border-ink bg-chalk font-black uppercase tracking-wide hover:bg-pop-lime hover:text-ink brutalist-shadow-sm"
         >
           <RefreshCw
             className={`w-4 h-4 mr-2 ${isPushing ? "animate-spin" : ""}`}
@@ -130,15 +131,25 @@ export function FormEditorClient({ initialData }: FormEditorClientProps) {
 
       {/* Unsaved changes banner */}
       {dirtySteps.size > 0 && (
-        <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-          <span className="text-sm font-medium text-amber-800">
+        <div className="mb-4 flex items-center justify-between bg-pop-lime/20 border-2 border-ink px-4 py-3 brutalist-shadow-sm">
+          <span className="text-sm font-black uppercase tracking-wide text-ink">
             You have unsaved changes
           </span>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={discardChanges}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={discardChanges}
+              className="font-bold uppercase tracking-wide hover:bg-ink hover:text-chalk"
+            >
               Discard
             </Button>
-            <Button size="sm" onClick={saveChanges} disabled={isSaving}>
+            <Button
+              size="sm"
+              onClick={saveChanges}
+              disabled={isSaving}
+              className="bg-pop-lime text-ink border-2 border-ink font-black uppercase tracking-wide hover:bg-pop-lime/80 brutalist-shadow-sm"
+            >
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
@@ -148,7 +159,7 @@ export function FormEditorClient({ initialData }: FormEditorClientProps) {
       {/* 3-column layout */}
       <div className="flex gap-4 h-[calc(100%-8rem)]">
         {/* Left — Step List */}
-        <div className="w-60 flex-shrink-0 overflow-y-auto bg-white border border-gray-200 rounded-xl p-3">
+        <div className="w-60 flex-shrink-0 overflow-y-auto bg-card border-2 border-ink brutalist-shadow p-3">
           <StepList
             formData={formData}
             selectedKey={selectedKey}
@@ -157,7 +168,7 @@ export function FormEditorClient({ initialData }: FormEditorClientProps) {
         </div>
 
         {/* Center — Field Editor */}
-        <div className="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-xl p-6">
+        <div className="flex-1 overflow-y-auto bg-card border-2 border-ink brutalist-shadow p-6">
           {selectedConfig ? (
             <FieldEditor
               config={selectedConfig}
@@ -169,7 +180,7 @@ export function FormEditorClient({ initialData }: FormEditorClientProps) {
               }
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
+            <div className="flex items-center justify-center h-full text-ink/40 font-bold uppercase tracking-wide">
               Select a step from the sidebar
             </div>
           )}

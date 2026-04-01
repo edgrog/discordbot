@@ -9,7 +9,7 @@ export default async function DashboardLayout({
   const dashUser = { email: "ed@grog.shop", name: "Ed", role: "admin" as const };
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-chalk">
       <Sidebar
         userEmail={dashUser.email}
         userName={dashUser.name}

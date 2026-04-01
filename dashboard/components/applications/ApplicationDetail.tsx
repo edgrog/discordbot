@@ -54,7 +54,7 @@ export function ApplicationDetail({
         );
       } else {
         toast.success(
-          `Application ${action === "approve" ? "approved" : "rejected"}`
+          `Submission ${action === "approve" ? "approved" : "rejected"}`
         );
       }
 
@@ -103,11 +103,11 @@ export function ApplicationDetail({
     }));
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[500px] bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col transform transition-transform duration-300">
+    <div className="fixed inset-y-0 right-0 w-[500px] bg-chalk border-l-2 border-ink brutalist-shadow z-50 flex flex-col transform transition-transform duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="flex items-center justify-between p-6 border-b-2 border-ink">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-black uppercase tracking-wide text-ink">
             {app.full_name || "Unknown"}
           </h2>
           <div className="flex items-center gap-2 mt-1">
@@ -117,7 +117,7 @@ export function ApplicationDetail({
         </div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 p-1"
+          className="text-ink/40 hover:text-pop-pink p-1 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -127,16 +127,16 @@ export function ApplicationDetail({
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Discord */}
         <div>
-          <p className="text-xs font-medium text-gray-500 mb-1">Discord</p>
-          <p className="text-sm text-gray-900">
+          <p className="text-xs font-black uppercase tracking-wide text-ink/50 mb-1">Discord</p>
+          <p className="text-sm font-bold text-ink">
             {app.discord_username || app.discord_id}
           </p>
         </div>
 
         {/* Submitted */}
         <div>
-          <p className="text-xs font-medium text-gray-500 mb-1">Submitted</p>
-          <p className="text-sm text-gray-900">
+          <p className="text-xs font-black uppercase tracking-wide text-ink/50 mb-1">Submitted</p>
+          <p className="text-sm font-bold text-ink">
             {format(new Date(app.created_at), "PPpp")} (
             {formatDistanceToNow(new Date(app.created_at), {
               addSuffix: true,
@@ -147,14 +147,14 @@ export function ApplicationDetail({
 
         {/* Personal Details */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+          <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-3">
             Personal Details
           </h3>
           <div className="space-y-2">
             {personalFields.map((f) => (
               <div key={f.label}>
-                <p className="text-xs font-medium text-gray-500">{f.label}</p>
-                <p className="text-sm text-gray-900">{f.value || "—"}</p>
+                <p className="text-xs font-black uppercase tracking-wide text-ink/50">{f.label}</p>
+                <p className="text-sm font-bold text-ink">{f.value || "—"}</p>
               </div>
             ))}
           </div>
@@ -163,15 +163,15 @@ export function ApplicationDetail({
         {/* Category Answers */}
         {categoryAnswers.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
+            <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-3">
               {CATEGORY_LABELS[app.category as CategoryType] || app.category}{" "}
               Details
             </h3>
             <div className="space-y-2">
               {categoryAnswers.map((a) => (
                 <div key={a.key}>
-                  <p className="text-xs font-medium text-gray-500">{a.label}</p>
-                  <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                  <p className="text-xs font-black uppercase tracking-wide text-ink/50">{a.label}</p>
+                  <p className="text-sm font-bold text-ink whitespace-pre-wrap">
                     {a.value || "—"}
                   </p>
                 </div>
@@ -182,58 +182,57 @@ export function ApplicationDetail({
 
         {/* DM Status */}
         {app.status !== "pending" && !app.dm_sent && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-700">
-              DM was not sent — applicant may have DMs closed
+          <div className="bg-pop-orange/10 border-2 border-pop-orange p-3">
+            <p className="text-sm font-bold text-pop-orange">
+              DM was not sent — submitter may have DMs closed
             </p>
           </div>
         )}
 
         {/* Review Section */}
         {app.status === "pending" ? (
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
+          <div className="border-t-2 border-ink pt-6">
+            <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-3">
               Review
             </h3>
             <Textarea
               placeholder="Add a note to include in the DM... (optional)"
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 500))}
-              className="mb-2"
+              className="mb-2 border-2 border-ink rounded-none bg-white font-bold text-ink"
               rows={3}
             />
-            <p className="text-xs text-gray-400 mb-4">{note.length}/500</p>
+            <p className="text-xs font-bold text-ink/40 mb-4">{note.length}/500</p>
 
             <div className="flex gap-3">
               <Button
                 onClick={() => handleAction("approve")}
                 disabled={isLoading}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 bg-pop-lime text-ink font-black uppercase tracking-wide border-2 border-ink rounded-none brutalist-shadow hover:bg-pop-lime/80"
               >
                 Approve
               </Button>
               <Button
                 onClick={() => handleAction("reject")}
                 disabled={isLoading}
-                variant="destructive"
-                className="flex-1"
+                className="flex-1 bg-pop-pink text-white font-black uppercase tracking-wide border-2 border-ink rounded-none brutalist-shadow hover:bg-pop-pink/80"
               >
                 Reject
               </Button>
             </div>
           </div>
         ) : (
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
+          <div className="border-t-2 border-ink pt-6">
+            <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-3">
               Review Decision
             </h3>
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Reviewed by:</span>{" "}
+            <p className="text-sm font-bold text-ink/70">
+              <span className="font-black">Reviewed by:</span>{" "}
               {app.reviewed_by || "Unknown"}
             </p>
             {app.review_note && (
-              <p className="text-sm text-gray-600 mt-2">
-                <span className="font-medium">Note:</span> {app.review_note}
+              <p className="text-sm font-bold text-ink/70 mt-2">
+                <span className="font-black">Note:</span> {app.review_note}
               </p>
             )}
           </div>

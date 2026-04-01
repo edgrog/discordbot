@@ -16,18 +16,27 @@ export function StatsCard({
   accentColor,
 }: StatsCardProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5">
+    <div
+      className="bg-card border-2 border-ink p-5 brutalist-shadow hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+    >
       <div className="flex items-center justify-between mb-3">
-        <Icon
-          className="w-5 h-5"
-          style={{ color: accentColor || "#6B7280" }}
-        />
+        <div
+          className="w-8 h-8 border-2 border-ink flex items-center justify-center"
+          style={{ backgroundColor: accentColor || "#BFFF00" }}
+        >
+          <Icon className="w-4 h-4 text-ink" strokeWidth={2.5} />
+        </div>
         {pulse && (
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          <span
+            className="w-2.5 h-2.5 rounded-full animate-pulse"
+            style={{ backgroundColor: accentColor || "#FF6B00" }}
+          />
         )}
       </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-sm text-gray-500 mt-1">{title}</p>
+      <p className="text-3xl font-black text-ink tabular-nums">{value}</p>
+      <p className="text-xs font-semibold text-ink/50 mt-1 uppercase tracking-wide">
+        {title}
+      </p>
     </div>
   );
 }

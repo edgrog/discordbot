@@ -93,29 +93,29 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="Settings" description="Configure Discord and bot settings" />
+      <PageHeader title="Settings" description="Configure Discord and Formie bot settings" />
 
       <div className="space-y-8 max-w-2xl">
         {/* Discord Configuration */}
-        <section className="bg-white border border-gray-200 rounded-xl p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+        <section className="bg-card border-2 border-ink p-6 brutalist-shadow">
+          <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-4">
             Discord Configuration
           </h3>
           <div className="space-y-4">
             {[
-              { key: "role_id_creator", label: "Creator Partner Role ID" },
-              { key: "role_id_artist", label: "Artist Partner Role ID" },
-              { key: "role_id_club", label: "Club Partner Role ID" },
-              { key: "role_id_bar", label: "Bar / Venue Partner Role ID" },
+              { key: "role_id_creator", label: "Creator Role ID" },
+              { key: "role_id_artist", label: "Artist Role ID" },
+              { key: "role_id_club", label: "Club Role ID" },
+              { key: "role_id_bar", label: "Bar / Venue Role ID" },
               { key: "admin_channel_id", label: "Admin Channel ID" },
             ].map((field) => (
               <div key={field.key}>
-                <Label className="text-xs text-gray-600">{field.label}</Label>
+                <Label className="text-xs font-black uppercase tracking-wide text-ink/60">{field.label}</Label>
                 <Input
                   value={settings[field.key] || ""}
                   onChange={(e) => updateLocal(field.key, e.target.value)}
                   placeholder="Discord ID"
-                  className="mt-1"
+                  className="mt-1 border-2 border-ink rounded-none font-mono text-xs"
                 />
               </div>
             ))}
@@ -131,17 +131,18 @@ export default function SettingsPage() {
               }
               disabled={saving === "role_id_creator"}
               size="sm"
+              className="bg-ink text-white font-black uppercase hover:brutalist-shadow-sm"
             >
               {saving === "role_id_creator" ? "Saving..." : "Save Discord Config"}
             </Button>
           </div>
 
-          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mt-4 p-3 bg-[#FF6B00]/10 border-2 border-ink">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
-                The bot&apos;s role must be placed <strong>above</strong> all partner
-                roles in Discord Server Settings &rarr; Roles. Otherwise, role
+              <AlertTriangle className="w-4 h-4 text-[#FF6B00] mt-0.5 flex-shrink-0" />
+              <p className="text-xs font-bold text-ink/80">
+                The bot&apos;s role must be placed <strong>above</strong> all
+                assigned roles in Discord Server Settings &rarr; Roles. Otherwise, role
                 assignment will silently fail.
               </p>
             </div>
@@ -149,30 +150,30 @@ export default function SettingsPage() {
         </section>
 
         {/* DM Templates */}
-        <section className="bg-white border border-gray-200 rounded-xl p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+        <section className="bg-card border-2 border-ink p-6 brutalist-shadow">
+          <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-4">
             DM Templates
           </h3>
-          <p className="text-xs text-gray-500 mb-4">
-            Use <code className="bg-gray-100 px-1 rounded">{"{name}"}</code> to
+          <p className="text-xs font-bold text-ink/50 mb-4">
+            Use <code className="bg-[#BFFF00]/30 border border-ink px-1 font-mono">{"{name}"}</code> to
             insert the applicant&apos;s name.
           </p>
 
           <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label className="text-xs text-gray-600">
+                <Label className="text-xs font-black uppercase tracking-wide text-ink/60">
                   Approval Message
                 </Label>
                 <Dialog>
-                  <DialogTrigger className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1">
+                  <DialogTrigger className="text-xs font-bold text-ink/50 hover:text-ink flex items-center gap-1 uppercase tracking-wide transition-colors">
                       <Eye className="w-3 h-3" /> Preview
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="border-2 border-ink rounded-none brutalist-shadow">
                     <DialogHeader>
-                      <DialogTitle>Approval DM Preview</DialogTitle>
+                      <DialogTitle className="font-black uppercase tracking-wide text-ink">Approval DM Preview</DialogTitle>
                     </DialogHeader>
-                    <div className="bg-[#313338] text-white p-4 rounded-lg whitespace-pre-wrap text-sm">
+                    <div className="bg-ink text-[#BFFF00] p-4 font-mono text-sm whitespace-pre-wrap border-2 border-ink">
                       {previewTemplate(settings.dm_approve_template || "")}
                     </div>
                   </DialogContent>
@@ -184,23 +185,24 @@ export default function SettingsPage() {
                   updateLocal("dm_approve_template", e.target.value)
                 }
                 rows={4}
+                className="border-2 border-ink rounded-none font-mono text-xs"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label className="text-xs text-gray-600">
+                <Label className="text-xs font-black uppercase tracking-wide text-ink/60">
                   Rejection Message
                 </Label>
                 <Dialog>
-                  <DialogTrigger className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1">
+                  <DialogTrigger className="text-xs font-bold text-ink/50 hover:text-ink flex items-center gap-1 uppercase tracking-wide transition-colors">
                       <Eye className="w-3 h-3" /> Preview
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="border-2 border-ink rounded-none brutalist-shadow">
                     <DialogHeader>
-                      <DialogTitle>Rejection DM Preview</DialogTitle>
+                      <DialogTitle className="font-black uppercase tracking-wide text-ink">Rejection DM Preview</DialogTitle>
                     </DialogHeader>
-                    <div className="bg-[#313338] text-white p-4 rounded-lg whitespace-pre-wrap text-sm">
+                    <div className="bg-ink text-[#FF3366] p-4 font-mono text-sm whitespace-pre-wrap border-2 border-ink">
                       {previewTemplate(settings.dm_reject_template || "")}
                     </div>
                   </DialogContent>
@@ -212,6 +214,7 @@ export default function SettingsPage() {
                   updateLocal("dm_reject_template", e.target.value)
                 }
                 rows={4}
+                className="border-2 border-ink rounded-none font-mono text-xs"
               />
             </div>
 
@@ -221,6 +224,7 @@ export default function SettingsPage() {
               }
               disabled={saving === "dm_approve_template"}
               size="sm"
+              className="bg-ink text-white font-black uppercase hover:brutalist-shadow-sm"
             >
               {saving === "dm_approve_template"
                 ? "Saving..."
@@ -230,8 +234,8 @@ export default function SettingsPage() {
         </section>
 
         {/* Bot */}
-        <section className="bg-white border border-gray-200 rounded-xl p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Bot</h3>
+        <section className="bg-card border-2 border-ink p-6 brutalist-shadow">
+          <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-4">Formie Bot</h3>
 
           <div className="mb-4">
             <BotStatus />
@@ -241,6 +245,7 @@ export default function SettingsPage() {
             variant="outline"
             onClick={pushToBot}
             disabled={isPushing}
+            className="border-2 border-ink rounded-none font-black uppercase text-xs hover:bg-ink hover:text-white transition-colors"
           >
             <RefreshCw
               className={`w-4 h-4 mr-2 ${isPushing ? "animate-spin" : ""}`}

@@ -9,30 +9,35 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        brand: "#FFD700",
-        "grog-yellow": "#FFD700",
-        category: {
-          creator: "#7C3AED",
-          artist: "#EA580C",
-          club: "#16A34A",
-          bar: "#2563EB",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        card: "hsl(var(--card))",
+        pop: {
+          lime: "#BFFF00",
+          pink: "#FF3366",
+          blue: "#3366FF",
+          orange: "#FF6B00",
+          purple: "#8B5CF6",
+          cyan: "#00D4FF",
+          yellow: "#FFE500",
         },
+        ink: "#141414",
+        chalk: "#F5F5F0",
         status: {
-          pending: "#D97706",
-          approved: "#16A34A",
-          rejected: "#DC2626",
+          pending: "#FF6B00",
+          approved: "#BFFF00",
+          rejected: "#FF3366",
         },
-        sidebar: {
-          bg: "#111827",
-          text: "#9CA3AF",
-          active: "#FFD700",
-        },
-        surface: "#FFFFFF",
       },
-      backgroundColor: {
-        page: "#FAFAFA",
+      borderWidth: {
+        "3": "3px",
+      },
+      borderRadius: {
+        none: "0px",
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "monospace"],
       },
     },
   },

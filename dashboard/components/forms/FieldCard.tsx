@@ -60,14 +60,14 @@ export function FieldCard({
       <div
         ref={setNodeRef}
         style={style}
-        className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+        className="bg-card border-2 border-ink p-4 brutalist-shadow-sm"
       >
         <div className="flex items-start gap-3">
           {/* Drag Handle */}
           <button
             {...attributes}
             {...listeners}
-            className="mt-2 cursor-grab text-gray-400 hover:text-gray-600 active:cursor-grabbing"
+            className="mt-2 cursor-grab text-ink/40 hover:text-ink active:cursor-grabbing"
           >
             <GripVertical className="w-4 h-4" />
           </button>
@@ -78,13 +78,13 @@ export function FieldCard({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-gray-500">
+                  <span className="text-xs font-black uppercase tracking-wide text-ink">
                     Label
                   </span>
                   {isLocked && (
                     <Tooltip>
                       <TooltipTrigger>
-                        <Lock className="w-3 h-3 text-amber-500" />
+                        <Lock className="w-3 h-3 text-pop-orange" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs max-w-52">
@@ -97,10 +97,10 @@ export function FieldCard({
                   )}
                 </div>
                 <span
-                  className={`text-xs ${
+                  className={`text-xs font-bold ${
                     field.label.length >= MAX_LABEL
-                      ? "text-red-500 font-medium"
-                      : "text-gray-400"
+                      ? "text-pop-pink font-black"
+                      : "text-ink/40"
                   }`}
                 >
                   {field.label.length}/{MAX_LABEL}
@@ -111,7 +111,7 @@ export function FieldCard({
                 onChange={(e) =>
                   onUpdate({ label: e.target.value.slice(0, MAX_LABEL) })
                 }
-                className="text-sm"
+                className="text-sm font-bold border-2 border-ink bg-chalk"
               />
             </div>
 
@@ -119,26 +119,26 @@ export function FieldCard({
             <div className="flex items-start gap-4">
               {/* Type Toggle */}
               <div className="flex-shrink-0">
-                <span className="text-xs font-medium text-gray-500 block mb-1">
+                <span className="text-xs font-black uppercase tracking-wide text-ink block mb-1">
                   Type
                 </span>
-                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                <div className="flex border-2 border-ink overflow-hidden">
                   <button
                     onClick={() => onUpdate({ type: "short" })}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors ${
                       field.type === "short"
-                        ? "bg-gray-900 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        ? "bg-ink text-chalk"
+                        : "bg-chalk text-ink hover:bg-pop-lime"
                     }`}
                   >
                     Short
                   </button>
                   <button
                     onClick={() => onUpdate({ type: "paragraph" })}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors border-l-2 border-ink ${
                       field.type === "paragraph"
-                        ? "bg-gray-900 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
+                        ? "bg-ink text-chalk"
+                        : "bg-chalk text-ink hover:bg-pop-lime"
                     }`}
                   >
                     Long
@@ -149,14 +149,14 @@ export function FieldCard({
               {/* Placeholder */}
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-gray-500">
+                  <span className="text-xs font-black uppercase tracking-wide text-ink">
                     Placeholder
                   </span>
                   <span
-                    className={`text-xs ${
+                    className={`text-xs font-bold ${
                       (field.placeholder?.length || 0) >= MAX_PLACEHOLDER
-                        ? "text-red-500 font-medium"
-                        : "text-gray-400"
+                        ? "text-pop-pink font-black"
+                        : "text-ink/40"
                     }`}
                   >
                     {field.placeholder?.length || 0}/{MAX_PLACEHOLDER}
@@ -170,7 +170,7 @@ export function FieldCard({
                     })
                   }
                   placeholder="Optional placeholder text..."
-                  className="text-sm"
+                  className="text-sm font-bold border-2 border-ink bg-chalk"
                 />
               </div>
             </div>
@@ -184,12 +184,12 @@ export function FieldCard({
                     onUpdate({ required: checked })
                   }
                 />
-                <span className="text-xs text-gray-600">Required</span>
+                <span className="text-xs font-black uppercase tracking-wide text-ink">Required</span>
               </div>
 
               {!isLocked && (
                 <AlertDialog>
-                  <AlertDialogTrigger className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                  <AlertDialogTrigger className="text-ink/40 hover:text-pop-pink transition-colors p-1">
                       <Trash2 className="w-4 h-4" />
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -204,7 +204,7 @@ export function FieldCard({
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={onRemove}
-                        className="bg-red-600 hover:bg-red-700"
+                        className="bg-pop-pink hover:bg-pop-pink/80 text-white border-2 border-ink font-black uppercase tracking-wide"
                       >
                         Delete
                       </AlertDialogAction>

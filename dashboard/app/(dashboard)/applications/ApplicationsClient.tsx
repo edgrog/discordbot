@@ -109,8 +109,13 @@ export function ApplicationsClient({
 
   return (
     <div>
-      <PageHeader title="Applications" description="Review partner applications">
-        <Button variant="outline" size="sm" onClick={handleExport}>
+      <PageHeader title="Submissions" description="Review Formie submissions">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          className="border-2 border-ink rounded-none font-black uppercase tracking-wide brutalist-shadow hover:bg-pop-lime/20 transition-colors"
+        >
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
@@ -129,7 +134,7 @@ export function ApplicationsClient({
         />
       )}
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-card border-2 border-ink brutalist-shadow overflow-hidden">
         <ApplicationsTable
           applications={applications}
           selectedIds={selectedIds}

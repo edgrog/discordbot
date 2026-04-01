@@ -14,7 +14,6 @@ export default async function HomePage() {
   // TODO: TEMPORARY — auth bypassed for testing. Re-enable before production.
   const dashUser = { email: "ed@grog.shop", name: "Ed", role: "admin" as const };
 
-  // Fetch stats
   const { count: totalCount } = await supabase
     .from("partner_applications")
     .select("*", { count: "exact", head: true });
@@ -40,14 +39,12 @@ export default async function HomePage() {
     .eq("status", "rejected")
     .gte("created_at", firstOfMonth.toISOString());
 
-  // Recent applications
   const { data: recentApps } = await supabase
     .from("partner_applications")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(10);
 
-  // Category breakdown
   const { data: allApps } = await supabase
     .from("partner_applications")
     .select("category");
@@ -58,43 +55,43 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-chalk">
       <Sidebar
         userEmail={dashUser.email}
         userName={dashUser.name}
         userRole={dashUser.role}
       />
       <main className="ml-64 p-8">
-        <PageHeader title="Dashboard" description="Overview of partner applications" />
+        <PageHeader title="Dashboard" description="Your form submissions at a glance" />
 
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-4 gap-5 mb-8">
           <StatsCard
-            title="Total Applications"
+            title="Total"
             value={totalCount || 0}
             icon={FileText}
           />
           <StatsCard
-            title="Pending Review"
+            title="Pending"
             value={pendingCount || 0}
             icon={Clock}
             pulse={!!pendingCount && pendingCount > 0}
-            accentColor="#D97706"
+            accentColor="#FF6B00"
           />
           <StatsCard
-            title="Approved This Month"
+            title="Approved"
             value={approvedMonth || 0}
             icon={CheckCircle2}
-            accentColor="#16A34A"
+            accentColor="#BFFF00"
           />
           <StatsCard
-            title="Rejected This Month"
+            title="Rejected"
             value={rejectedMonth || 0}
             icon={XCircle}
-            accentColor="#DC2626"
+            accentColor="#FF3366"
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-3 gap-5">
           <div className="col-span-2">
             <RecentApplications applications={recentApps || []} />
           </div>

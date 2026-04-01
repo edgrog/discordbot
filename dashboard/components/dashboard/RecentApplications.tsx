@@ -21,23 +21,23 @@ export function RecentApplications({
 }: RecentApplicationsProps) {
   if (applications.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-        <div className="text-4xl mb-3">📋</div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-          No applications yet
+      <div className="bg-card border-2 border-ink p-8 text-center brutalist-shadow">
+        <div className="text-4xl mb-3">-_-</div>
+        <h3 className="text-sm font-black text-ink uppercase">
+          No submissions yet
         </h3>
-        <p className="text-sm text-gray-500">
-          Share the /apply command in your Discord
+        <p className="text-xs text-ink/50 mt-1">
+          Deploy the bot and share the /apply command
         </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900">
-          Recent Applications
+    <div className="bg-card border-2 border-ink overflow-hidden brutalist-shadow">
+      <div className="px-5 py-3 border-b-2 border-ink bg-pop-lime">
+        <h3 className="text-sm font-black text-ink uppercase tracking-wide">
+          Recent Submissions
         </h3>
       </div>
       <Table>
@@ -46,24 +46,24 @@ export function RecentApplications({
             <TableHead>Name</TableHead>
             <TableHead>Category</TableHead>
             <TableHead>Discord</TableHead>
-            <TableHead>Submitted</TableHead>
+            <TableHead>When</TableHead>
             <TableHead>Status</TableHead>
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {applications.map((app) => (
-            <TableRow key={app.id}>
-              <TableCell className="font-medium">
+            <TableRow key={app.id} className="hover:bg-chalk">
+              <TableCell className="font-bold text-ink">
                 {app.full_name || "—"}
               </TableCell>
               <TableCell>
                 <CategoryBadge category={app.category as CategoryType} />
               </TableCell>
-              <TableCell className="text-gray-600">
+              <TableCell className="text-ink/60 font-mono text-xs">
                 {app.discord_username || app.discord_id}
               </TableCell>
-              <TableCell className="text-gray-600">
+              <TableCell className="text-ink/60 text-xs">
                 {formatDistanceToNow(new Date(app.created_at), {
                   addSuffix: true,
                 })}
@@ -74,9 +74,9 @@ export function RecentApplications({
               <TableCell>
                 <Link
                   href="/applications"
-                  className="text-sm text-gray-500 hover:text-gray-900"
+                  className="text-xs font-bold text-ink/40 hover:text-ink uppercase"
                 >
-                  Review &rarr;
+                  View &rarr;
                 </Link>
               </TableCell>
             </TableRow>

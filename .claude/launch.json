@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Dashboard (Next.js)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "cwd": "dashboard"
+    },
+    {
+      "name": "Bot (Discord + Express API)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--watch", "index.js"],
+      "port": 3001,
+      "cwd": "bot"
+    }
+  ]
+}

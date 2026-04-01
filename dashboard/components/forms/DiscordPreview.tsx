@@ -11,7 +11,14 @@ interface DiscordPreviewProps {
 
 export function DiscordPreview({ config }: DiscordPreviewProps) {
   return (
-    <div className="rounded-xl overflow-hidden shadow-lg">
+    <div className="border-2 border-ink brutalist-shadow overflow-hidden">
+      {/* Brutalist label */}
+      <div className="bg-ink px-3 py-1.5">
+        <span className="text-xs font-black uppercase tracking-wide text-pop-lime">
+          Discord Preview
+        </span>
+      </div>
+
       {/* Modal Header */}
       <div className="bg-[#2B2D31] px-4 py-3">
         <h3 className="text-white text-sm font-semibold truncate">

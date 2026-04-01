@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Zap } from "lucide-react";
 
 type LoginState = "idle" | "loading" | "sent" | "error";
 
@@ -50,73 +50,79 @@ function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div className="text-center mb-8">
-        <div className="text-5xl mb-3">🍋</div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-          Grog
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">Partner Dashboard</p>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        {accessDenied && state === "idle" && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            You don&apos;t have access. Contact Ed.
+    <div className="min-h-screen bg-chalk flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 bg-pop-lime border-3 border-ink mx-auto mb-4 flex items-center justify-center brutalist-shadow">
+            <Zap className="w-6 h-6 text-ink" strokeWidth={3} />
           </div>
-        )}
+          <h1 className="text-2xl font-black tracking-tight text-ink uppercase">
+            Formie
+          </h1>
+          <p className="text-sm text-ink/50 mt-1 font-medium">Discord Form Builder</p>
+        </div>
 
-        {state === "sent" ? (
-          <div className="text-center py-4">
-            <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3 animate-in zoom-in duration-300" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              Check your inbox
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              We sent a magic link to{" "}
-              <span className="font-medium text-gray-700">{email}</span>
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-gray-700">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1.5"
-                  autoFocus
-                  required
-                />
-              </div>
-
-              {state === "error" && errorMsg && (
-                <p className="text-sm text-red-600">{errorMsg}</p>
-              )}
-
-              <Button
-                type="submit"
-                disabled={state === "loading"}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white"
-              >
-                {state === "loading" ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Send magic link"
-                )}
-              </Button>
+        <div className="bg-card border-3 border-ink p-6 brutalist-shadow">
+          {accessDenied && state === "idle" && (
+            <div className="mb-4 p-3 bg-pop-pink/10 border-2 border-pop-pink text-sm font-bold text-ink">
+              You don&apos;t have access. Contact the admin.
             </div>
-          </form>
-        )}
+          )}
+
+          {state === "sent" ? (
+            <div className="text-center py-4">
+              <div className="w-12 h-12 bg-pop-lime border-2 border-ink mx-auto mb-3 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-ink" />
+              </div>
+              <h2 className="text-lg font-black text-ink uppercase">
+                Check your inbox
+              </h2>
+              <p className="text-sm text-ink/50 mt-1">
+                Magic link sent to{" "}
+                <span className="font-bold text-ink">{email}</span>
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="email" className="text-xs font-black text-ink uppercase tracking-wide">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-1.5 border-2 border-ink rounded-none font-medium focus:ring-0 focus:border-ink"
+                    autoFocus
+                    required
+                  />
+                </div>
+
+                {state === "error" && errorMsg && (
+                  <p className="text-sm font-bold text-pop-pink">{errorMsg}</p>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={state === "loading"}
+                  className="w-full bg-ink hover:bg-ink/90 text-white font-black uppercase tracking-wide rounded-none border-2 border-ink brutalist-shadow-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+                >
+                  {state === "loading" ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send magic link"
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

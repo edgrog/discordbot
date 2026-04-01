@@ -67,7 +67,7 @@ export function ApplicationsTable({
     return (
       <button
         onClick={() => onSort(field)}
-        className="flex items-center gap-1 hover:text-gray-900"
+        className="flex items-center gap-1 font-black uppercase tracking-wide text-ink hover:text-pop-pink transition-colors"
       >
         {children}
         <ArrowUpDown className="w-3 h-3" />
@@ -77,12 +77,12 @@ export function ApplicationsTable({
 
   if (applications.length === 0) {
     return (
-      <div className="text-center py-16">
+      <div className="text-center py-16 bg-chalk">
         <div className="text-4xl mb-3">📋</div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-          No applications found
+        <h3 className="text-lg font-black uppercase tracking-wide text-ink mb-1">
+          No submissions found
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm font-bold text-ink/60">
           Try adjusting your filters or share the /apply command in Discord
         </p>
       </div>
@@ -92,24 +92,24 @@ export function ApplicationsTable({
   return (
     <Table>
       <TableHeader>
-        <TableRow>
+        <TableRow className="border-b-2 border-ink bg-chalk">
           {isAdmin && (
             <TableHead className="w-10">
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
             </TableHead>
           )}
-          <TableHead>
+          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">
             <SortHeader field="full_name">Name</SortHeader>
           </TableHead>
-          <TableHead>
+          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">
             <SortHeader field="category">Category</SortHeader>
           </TableHead>
-          <TableHead>Discord</TableHead>
-          <TableHead>Location</TableHead>
-          <TableHead>
+          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Discord</TableHead>
+          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Location</TableHead>
+          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">
             <SortHeader field="created_at">Submitted</SortHeader>
           </TableHead>
-          <TableHead>
+          <TableHead className="font-black uppercase tracking-wide text-ink text-xs">
             <SortHeader field="status">Status</SortHeader>
           </TableHead>
           <TableHead></TableHead>
@@ -119,7 +119,7 @@ export function ApplicationsTable({
         {applications.map((app) => (
           <TableRow
             key={app.id}
-            className="cursor-pointer hover:bg-gray-50"
+            className="cursor-pointer border-b-2 border-ink hover:bg-pop-lime/10 transition-colors"
             onClick={() => onRowClick(app)}
           >
             {isAdmin && (
@@ -130,19 +130,19 @@ export function ApplicationsTable({
                 />
               </TableCell>
             )}
-            <TableCell className="font-medium">
+            <TableCell className="font-bold text-ink">
               {app.full_name || "—"}
             </TableCell>
             <TableCell>
               <CategoryBadge category={app.category as CategoryType} />
             </TableCell>
-            <TableCell className="text-gray-600">
+            <TableCell className="font-bold text-ink/70">
               {app.discord_username || app.discord_id}
             </TableCell>
-            <TableCell className="text-gray-600">
+            <TableCell className="font-bold text-ink/70">
               {[app.city, app.state].filter(Boolean).join(", ") || "—"}
             </TableCell>
-            <TableCell className="text-gray-600">
+            <TableCell className="font-bold text-ink/70">
               {formatDistanceToNow(new Date(app.created_at), {
                 addSuffix: true,
               })}
@@ -151,7 +151,7 @@ export function ApplicationsTable({
               <StatusBadge status={app.status} />
             </TableCell>
             <TableCell>
-              <span className="text-sm text-gray-500 hover:text-gray-900">
+              <span className="text-sm font-black uppercase tracking-wide text-ink/50 hover:text-pop-pink transition-colors">
                 Review &rarr;
               </span>
             </TableCell>

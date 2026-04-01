@@ -34,15 +34,15 @@ export function ApplicationFilters({
   return (
     <div className="flex flex-wrap items-center gap-4 mb-6">
       {/* Status Pills */}
-      <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex border-2 border-ink overflow-hidden">
         {STATUS_OPTIONS.map((s) => (
           <button
             key={s}
             onClick={() => onChange({ ...filters, status: s })}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors border-r-2 border-ink last:border-r-0 ${
               filters.status === s
-                ? "bg-gray-900 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+                ? "bg-pop-lime text-ink"
+                : "bg-chalk text-ink/60 hover:bg-pop-lime/20"
             }`}
           >
             {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -51,15 +51,15 @@ export function ApplicationFilters({
       </div>
 
       {/* Category Pills */}
-      <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex border-2 border-ink overflow-hidden">
         {CATEGORY_OPTIONS.map((c) => (
           <button
             key={c}
             onClick={() => onChange({ ...filters, category: c })}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors border-r-2 border-ink last:border-r-0 ${
               filters.category === c
-                ? "bg-gray-900 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
+                ? "bg-pop-blue text-white"
+                : "bg-chalk text-ink/60 hover:bg-pop-blue/20"
             }`}
           >
             {CATEGORY_LABELS[c]}
@@ -73,25 +73,25 @@ export function ApplicationFilters({
           type="date"
           value={filters.dateFrom}
           onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
-          className="h-8 text-xs w-32"
+          className="h-8 text-xs w-32 border-2 border-ink rounded-none bg-white font-bold text-ink"
         />
-        <span className="text-xs text-gray-400">to</span>
+        <span className="text-xs font-black uppercase tracking-wide text-ink/40">to</span>
         <Input
           type="date"
           value={filters.dateTo}
           onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
-          className="h-8 text-xs w-32"
+          className="h-8 text-xs w-32 border-2 border-ink rounded-none bg-white font-bold text-ink"
         />
       </div>
 
       {/* Search */}
       <div className="relative flex-1 min-w-48">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40" />
         <Input
           placeholder="Search name, email, Discord..."
           value={filters.search}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          className="pl-9 h-8 text-sm"
+          className="pl-9 h-8 text-sm border-2 border-ink rounded-none bg-white font-bold text-ink"
         />
       </div>
     </div>

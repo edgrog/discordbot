@@ -77,21 +77,21 @@ export interface Setting {
 export type CategoryType = "creator" | "artist" | "club" | "bar";
 
 export const CATEGORY_LABELS: Record<CategoryType, string> = {
-  creator: "Content Creator",
+  creator: "Creator",
   artist: "Artist",
-  club: "Club / Organiser",
-  bar: "Bar / Venue",
+  club: "Club",
+  bar: "Venue",
 };
 
 export const CATEGORY_COLORS: Record<CategoryType, string> = {
-  creator: "#7C3AED",
-  artist: "#EA580C",
-  club: "#16A34A",
-  bar: "#2563EB",
+  creator: "#8B5CF6",
+  artist: "#FF6B00",
+  club: "#00D4FF",
+  bar: "#3366FF",
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  pending: "#D97706",
-  approved: "#16A34A",
-  rejected: "#DC2626",
+  pending: "#FF6B00",
+  approved: "#BFFF00",
+  rejected: "#FF3366",
 };

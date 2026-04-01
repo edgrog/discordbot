@@ -85,14 +85,14 @@ export function FieldEditor({
         {/* Step Title */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-xs font-black uppercase tracking-wide text-ink">
               Step Title
             </label>
             <span
-              className={`text-xs ${
+              className={`text-xs font-bold ${
                 config.step_title.length >= MAX_TITLE_LENGTH
-                  ? "text-red-500 font-medium"
-                  : "text-gray-400"
+                  ? "text-pop-pink font-black"
+                  : "text-ink/40"
               }`}
             >
               {config.step_title.length}/{MAX_TITLE_LENGTH}
@@ -103,7 +103,7 @@ export function FieldEditor({
             onChange={(e) =>
               onTitleChange(e.target.value.slice(0, MAX_TITLE_LENGTH))
             }
-            className="text-lg font-semibold"
+            className="text-lg font-bold border-2 border-ink bg-chalk focus:ring-pop-lime"
           />
         </div>
 
@@ -137,7 +137,7 @@ export function FieldEditor({
             variant="outline"
             onClick={addField}
             disabled={atLimit}
-            className="w-full border-dashed"
+            className="w-full border-2 border-dashed border-ink bg-chalk font-black uppercase tracking-wide hover:bg-pop-lime hover:text-ink hover:border-solid"
             title={atLimit ? "Discord limit: max 5 fields per step" : undefined}
           >
             <Plus className="w-4 h-4 mr-2" />

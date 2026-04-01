@@ -10,8 +10,8 @@ const geistSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Grog Partner Dashboard",
-  description: "Admin dashboard for the Grog Partner Program",
+  title: "Formie — Discord Form Builder",
+  description: "Build dynamic Discord forms and manage responses",
 };
 
 export default function RootLayout({

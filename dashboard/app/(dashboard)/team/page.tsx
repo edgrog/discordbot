@@ -131,11 +131,11 @@ export default function TeamPage() {
 
   return (
     <div>
-      <PageHeader title="Team" description="Manage dashboard access" />
+      <PageHeader title="Team" description="Manage Formie dashboard access" />
 
       {/* Invite Section */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">
+      <div className="bg-card border-2 border-ink p-5 mb-6 brutalist-shadow">
+        <h3 className="text-sm font-black uppercase tracking-wide text-ink mb-3">
           <UserPlus className="w-4 h-4 inline mr-2" />
           Invite Team Member
         </h3>
@@ -147,13 +147,14 @@ export default function TeamPage() {
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               required
+              className="border-2 border-ink rounded-none"
             />
           </div>
           <Select
             value={inviteRole}
             onValueChange={(v) => setInviteRole(v as "admin" | "member")}
           >
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-32 border-2 border-ink rounded-none">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -161,38 +162,42 @@ export default function TeamPage() {
               <SelectItem value="admin">Admin</SelectItem>
             </SelectContent>
           </Select>
-          <Button type="submit" disabled={isInviting}>
+          <Button
+            type="submit"
+            disabled={isInviting}
+            className="bg-ink text-white font-black uppercase hover:brutalist-shadow-sm"
+          >
             {isInviting ? "Sending..." : "Send Invite"}
           </Button>
         </form>
       </div>
 
       {/* Team Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-card border-2 border-ink brutalist-shadow overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Last Login</TableHead>
+            <TableRow className="border-b-2 border-ink bg-chalk">
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Name</TableHead>
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Email</TableHead>
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Role</TableHead>
+              <TableHead className="font-black uppercase tracking-wide text-ink text-xs">Last Login</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell className="font-medium">
+              <TableRow key={u.id} className="border-b border-ink/10">
+                <TableCell className="font-bold text-ink">
                   {u.name || u.email.split("@")[0]}
                 </TableCell>
-                <TableCell className="text-gray-600">{u.email}</TableCell>
+                <TableCell className="font-mono text-xs text-ink/60">{u.email}</TableCell>
                 <TableCell>
                   <Select
                     value={u.role}
                     onValueChange={(v) => v && handleRoleChange(u.id, v)}
                     disabled={u.id === currentUserId}
                   >
-                    <SelectTrigger className="w-28 h-8">
+                    <SelectTrigger className="w-28 h-8 border-2 border-ink rounded-none text-xs font-bold uppercase">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -201,7 +206,7 @@ export default function TeamPage() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="text-gray-600">
+                <TableCell className="font-mono text-xs text-ink/50">
                   {u.last_login
                     ? formatDistanceToNow(new Date(u.last_login), {
                         addSuffix: true,
@@ -211,25 +216,25 @@ export default function TeamPage() {
                 <TableCell>
                   {u.id !== currentUserId && (
                     <AlertDialog>
-                      <AlertDialogTrigger className="text-gray-400 hover:text-red-500 p-1">
+                      <AlertDialogTrigger className="text-ink/30 hover:text-[#FF3366] p-1 transition-colors">
                           <Trash2 className="w-4 h-4" />
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
+                      <AlertDialogContent className="border-2 border-ink rounded-none brutalist-shadow">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>
+                          <AlertDialogTitle className="font-black uppercase tracking-wide text-ink">
                             Remove {u.name || u.email}?
                           </AlertDialogTitle>
-                          <AlertDialogDescription>
+                          <AlertDialogDescription className="text-ink/60 font-medium">
                             They&apos;ll lose access immediately.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel className="border-2 border-ink rounded-none font-bold uppercase">Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() =>
                               handleRemove(u.id, u.name || u.email)
                             }
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-[#FF3366] text-white border-2 border-ink rounded-none font-black uppercase hover:bg-[#FF3366]/90"
                           >
                             Remove
                           </AlertDialogAction>

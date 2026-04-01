@@ -26,12 +26,13 @@ const CATEGORY_DISPLAY: Record<string, string> = {
 };
 
 const CATEGORY_BORDER_COLORS: Record<string, string> = {
-  personal: "#FFD700",
+  personal: "#FFE500",
   creator: CATEGORY_COLORS.creator,
   artist: CATEGORY_COLORS.artist,
   bar: CATEGORY_COLORS.bar,
   club: CATEGORY_COLORS.club,
 };
+
 
 export function StepList({ formData, selectedKey, onSelect }: StepListProps) {
   const grouped = CATEGORY_ORDER.reduce(
@@ -46,7 +47,7 @@ export function StepList({ formData, selectedKey, onSelect }: StepListProps) {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
+      <div className="space-y-5">
         {CATEGORY_ORDER.map((cat) => {
           const steps = grouped[cat];
           if (!steps || steps.length === 0) return null;
@@ -54,16 +55,16 @@ export function StepList({ formData, selectedKey, onSelect }: StepListProps) {
           return (
             <div key={cat}>
               <div
-                className="flex items-center gap-1.5 mb-2 pl-2"
-                style={{ borderLeft: `3px solid ${CATEGORY_BORDER_COLORS[cat]}` }}
+                className="flex items-center gap-1.5 mb-2 pl-2 border-l-3"
+                style={{ borderLeftColor: CATEGORY_BORDER_COLORS[cat] }}
               >
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <span className="text-xs font-black text-ink uppercase tracking-wide">
                   {CATEGORY_DISPLAY[cat]}
                 </span>
                 {cat === "personal" && (
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="w-3 h-3 text-gray-400" />
+                      <Info className="w-3 h-3 text-ink/40" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="text-xs max-w-48">
@@ -74,7 +75,7 @@ export function StepList({ formData, selectedKey, onSelect }: StepListProps) {
                 )}
               </div>
 
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {steps.map((step) => {
                   const key = `${step.category}_${step.step}`;
                   const isActive = key === selectedKey;
@@ -83,17 +84,21 @@ export function StepList({ formData, selectedKey, onSelect }: StepListProps) {
                     <button
                       key={key}
                       onClick={() => onSelect(key)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors border-2 ${
                         isActive
-                          ? "bg-gray-100 text-gray-900 font-medium"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          ? "bg-ink text-chalk font-bold border-ink"
+                          : "bg-chalk text-ink border-transparent hover:border-ink hover:bg-chalk font-medium"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>
+                        <span className="font-bold">
                           Step {step.step} &middot; {step.step_title}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span
+                          className={`text-xs font-black ${
+                            isActive ? "text-chalk/60" : "text-ink/40"
+                          }`}
+                        >
                           {step.fields.length}
                         </span>
                       </div>

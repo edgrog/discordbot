@@ -7,33 +7,33 @@ interface CategoryChartProps {
   data: Record<string, number>;
 }
 
+const CHART_COLORS = ["#BFFF00", "#FF3366", "#3366FF", "#FF6B00", "#8B5CF6", "#00D4FF"];
+
 export function CategoryChart({ data }: CategoryChartProps) {
-  const chartData = Object.entries(data).map(([category, count]) => ({
+  const chartData = Object.entries(data).map(([category, count], i) => ({
     name: CATEGORY_LABELS[category as CategoryType] || category,
     value: count,
-    color: CATEGORY_COLORS[category as CategoryType] || "#6B7280",
+    color: CATEGORY_COLORS[category as CategoryType] || CHART_COLORS[i % CHART_COLORS.length],
   }));
 
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
 
   if (total === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-        <div className="text-4xl mb-3">📊</div>
-        <h3 className="text-sm font-semibold text-gray-900">
-          Category Breakdown
+      <div className="bg-card border-2 border-ink p-8 text-center brutalist-shadow">
+        <div className="text-2xl mb-2 font-black">?</div>
+        <h3 className="text-sm font-black text-ink uppercase">
+          Categories
         </h3>
-        <p className="text-xs text-gray-500 mt-1">
-          No data yet
-        </p>
+        <p className="text-xs text-ink/50 mt-1">No data yet</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-gray-900 mb-4">
-        Category Breakdown
+    <div className="bg-card border-2 border-ink p-5 brutalist-shadow">
+      <h3 className="text-sm font-black text-ink uppercase tracking-wide mb-4">
+        Categories
       </h3>
 
       <ResponsiveContainer width="100%" height={200}>
@@ -44,8 +44,10 @@ export function CategoryChart({ data }: CategoryChartProps) {
             cy="50%"
             innerRadius={50}
             outerRadius={80}
-            paddingAngle={2}
+            paddingAngle={3}
             dataKey="value"
+            strokeWidth={2}
+            stroke="#141414"
           >
             {chartData.map((entry, i) => (
               <Cell key={i} fill={entry.color} />
@@ -56,23 +58,29 @@ export function CategoryChart({ data }: CategoryChartProps) {
               `${value} (${((Number(value) / total) * 100).toFixed(0)}%)`,
               String(name),
             ]}
+            contentStyle={{
+              background: "#141414",
+              border: "2px solid #141414",
+              color: "#F5F5F0",
+              fontSize: "12px",
+              fontWeight: 700,
+            }}
           />
         </PieChart>
       </ResponsiveContainer>
 
-      {/* Legend */}
       <div className="space-y-2 mt-4">
         {chartData.map((item) => (
           <div key={item.name} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span
-                className="w-3 h-3 rounded-full"
+                className="w-3 h-3 border border-ink"
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-xs text-gray-600">{item.name}</span>
+              <span className="text-xs font-semibold text-ink/70">{item.name}</span>
             </div>
-            <span className="text-xs font-medium text-gray-900">
-              {item.value} ({((item.value / total) * 100).toFixed(0)}%)
+            <span className="text-xs font-black text-ink tabular-nums">
+              {item.value}
             </span>
           </div>
         ))}
