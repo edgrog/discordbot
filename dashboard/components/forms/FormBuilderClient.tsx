@@ -166,7 +166,7 @@ export function FormBuilderClient({
       const metaRes = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.name }),
+        body: JSON.stringify({ name: form.name, settings: form.settings }),
       });
       if (!metaRes.ok) {
         const err = await metaRes.json();
@@ -315,8 +315,30 @@ export function FormBuilderClient({
 
       {/* 3-Column Layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Column 1: Step List */}
+        {/* Column 1: Step List + Settings */}
         <div className="w-72 border-r-2 border-ink bg-chalk overflow-y-auto p-4 flex-shrink-0">
+          {/* Apply Channel */}
+          <div className="mb-4 pb-3 border-b-2 border-ink/10">
+            <label className="text-xs font-black uppercase tracking-wide text-ink block mb-1">
+              Apply Channel ID
+            </label>
+            <Input
+              value={form.settings?.apply_channel_id || ""}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  settings: { ...prev.settings, apply_channel_id: e.target.value },
+                }));
+                markDirty();
+              }}
+              placeholder="Right-click channel → Copy ID"
+              className="text-xs font-bold border-2 border-ink bg-chalk"
+            />
+            <p className="text-[10px] text-ink/40 mt-1">
+              Channel where &quot;Apply Now&quot; embed is posted
+            </p>
+          </div>
+
           <StepList
             steps={steps}
             selectedStepId={selectedStepId}
