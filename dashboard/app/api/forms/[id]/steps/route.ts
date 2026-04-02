@@ -25,7 +25,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { title, fields } = body;
+    const { title, fields, step_type, options, next_step } = body;
 
     if (!title || typeof title !== "string") {
       return NextResponse.json(
@@ -51,6 +51,9 @@ export async function POST(
         title,
         fields: fields || [],
         position: nextPosition,
+        step_type: step_type || "fields",
+        options: options || null,
+        next_step: next_step ?? null,
       })
       .select()
       .single();
@@ -112,11 +115,14 @@ export async function PUT(
 
     // Re-insert all steps with correct positions
     if (steps.length > 0) {
-      const rows = steps.map((step: { title: string; fields: unknown[] }, index: number) => ({
+      const rows = steps.map((step: { title: string; fields: unknown[]; step_type?: string; options?: unknown; next_step?: number | null }, index: number) => ({
         form_id: formId,
         title: step.title,
         fields: step.fields || [],
         position: index,
+        step_type: step.step_type || "fields",
+        options: step.options || null,
+        next_step: step.next_step ?? null,
       }));
 
       const { data: inserted, error: insertError } = await service

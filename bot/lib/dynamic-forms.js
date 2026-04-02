@@ -7,6 +7,7 @@ const {
   ActionRowBuilder,
   TextInputBuilder,
   TextInputStyle,
+  StringSelectMenuBuilder,
 } = require('discord.js');
 
 let formCache = new Map();   // Map<formId, { form, steps }>
@@ -22,8 +23,8 @@ async function loadFormConfig(supabase, log) {
     const { data: forms, error: formsErr } = await supabase
       .from('forms')
       .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
+      .eq('status', 'active')
+      .order('created_at', { ascending: true });
 
     if (formsErr) {
       log('error', 'Failed to load forms', { error: formsErr.message });
@@ -44,7 +45,7 @@ async function loadFormConfig(supabase, log) {
       .from('form_steps')
       .select('*')
       .in('form_id', formIds)
-      .order('step_order', { ascending: true });
+      .order('position', { ascending: true });
 
     if (stepsErr) {
       log('error', 'Failed to load form_steps', { error: stepsErr.message });
@@ -58,7 +59,7 @@ async function loadFormConfig(supabase, log) {
     for (const form of forms) {
       const formSteps = (steps || [])
         .filter(s => s.form_id === form.id)
-        .sort((a, b) => a.step_order - b.step_order);
+        .sort((a, b) => a.position - b.position);
 
       newFormCache.set(form.id, { form, steps: formSteps });
 
@@ -180,6 +181,117 @@ function isLoaded() {
   return formCache.size > 0;
 }
 
+/**
+ * Get the step type ("fields" or "select") for a given step.
+ */
+function getStepType(formId, stepIndex) {
+  const entry = formCache.get(formId);
+  if (!entry || !entry.steps[stepIndex]) return null;
+  return entry.steps[stepIndex].step_type || 'fields';
+}
+
+/**
+ * Build a StringSelectMenu for a "select" type step.
+ * customId format: formselect_<formId>_<stepIndex>
+ */
+function getSelectMenuForStep(formId, stepIndex) {
+  const entry = formCache.get(formId);
+  if (!entry || !entry.steps[stepIndex]) return null;
+
+  const step = entry.steps[stepIndex];
+  if (step.step_type !== 'select' || !step.options || step.options.length === 0) return null;
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`formselect_${formId}_${stepIndex}`)
+    .setPlaceholder('Select an option...')
+    .addOptions(
+      step.options.map(opt => ({
+        label: opt.label.slice(0, 100),
+        value: opt.value.slice(0, 100),
+      }))
+    );
+
+  return new ActionRowBuilder().addComponents(select);
+}
+
+/**
+ * Resolve the next step index given current step and optional selected value.
+ * Returns step index (number) or null (finalize).
+ */
+function resolveNextStep(formId, currentStepIndex, selectedValue) {
+  const entry = formCache.get(formId);
+  if (!entry) return null;
+
+  const step = entry.steps[currentStepIndex];
+  if (!step) return null;
+
+  let nextPos = null;
+
+  if (step.step_type === 'select' && selectedValue && step.options) {
+    const chosen = step.options.find(o => o.value === selectedValue);
+    nextPos = chosen?.next_step ?? null;
+  } else {
+    nextPos = step.next_step ?? null;
+  }
+
+  // null means "next in order"
+  if (nextPos === null) {
+    const sequential = currentStepIndex + 1;
+    return sequential < entry.steps.length ? sequential : null;
+  }
+
+  // -1 means "end form"
+  if (nextPos === -1) return null;
+
+  // Find step by position
+  const targetIndex = entry.steps.findIndex(s => s.position === nextPos);
+  return targetIndex >= 0 ? targetIndex : null;
+}
+
+/**
+ * Get a flat list of all fields across all steps for a form.
+ * Legacy step_type="select" steps are converted to a virtual singleselect field.
+ * Returns: [{ stepIndex, fieldIndex, field, stepTitle }]
+ */
+function getFlattenedFields(formId) {
+  const entry = formCache.get(formId);
+  if (!entry) return [];
+
+  const result = [];
+  for (let si = 0; si < entry.steps.length; si++) {
+    const step = entry.steps[si];
+
+    if (step.step_type === 'select' && step.options && step.options.length > 0) {
+      // Convert legacy select step to a virtual singleselect field
+      result.push({
+        stepIndex: si,
+        fieldIndex: 0,
+        field: {
+          key: step.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || `select_${si}`,
+          label: step.title || `Selection ${si + 1}`,
+          type: 'singleselect',
+          required: true,
+          options: step.options.map(o => ({ label: o.label, value: o.value, next_step: o.next_step })),
+          branching: step.options.some(o => o.next_step !== null && o.next_step !== undefined),
+        },
+        stepTitle: step.title,
+      });
+    } else {
+      const fields = step.fields || [];
+      for (let fi = 0; fi < fields.length; fi++) {
+        result.push({
+          stepIndex: si,
+          fieldIndex: fi,
+          field: fields[fi],
+          stepTitle: step.title,
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
 module.exports = {
   loadFormConfig,
   getFormById,
@@ -191,4 +303,8 @@ module.exports = {
   getActiveCommands,
   getLastLoadedAt,
   isLoaded,
+  getStepType,
+  getSelectMenuForStep,
+  resolveNextStep,
+  getFlattenedFields,
 };

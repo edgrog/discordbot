@@ -1,11 +1,12 @@
 "use client";
 
-import { FormField } from "@/lib/types";
+import { FormField, FieldOption, FormStep } from "@/lib/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { GripVertical, Trash2, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { GripVertical, Trash2, Lock, Plus, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -27,16 +28,28 @@ import {
 interface FieldCardProps {
   field: FormField;
   isLocked: boolean;
+  steps: FormStep[];
+  currentStepPosition: number;
   onUpdate: (updates: Partial<FormField>) => void;
   onRemove: () => void;
 }
 
 const MAX_LABEL = 45;
 const MAX_PLACEHOLDER = 100;
+const MAX_OPTIONS = 25;
+
+const FIELD_TYPES: { value: FormField["type"]; label: string }[] = [
+  { value: "short", label: "Short" },
+  { value: "paragraph", label: "Long" },
+  { value: "singleselect", label: "Select" },
+  { value: "multiselect", label: "Multi" },
+];
 
 export function FieldCard({
   field,
   isLocked,
+  steps,
+  currentStepPosition,
   onUpdate,
   onRemove,
 }: FieldCardProps) {
@@ -54,6 +67,32 @@ export function FieldCard({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const isSelectType = field.type === "singleselect" || field.type === "multiselect";
+  const options = field.options || [];
+
+  function addOption() {
+    if (options.length >= MAX_OPTIONS) return;
+    const ts = Date.now();
+    onUpdate({
+      options: [
+        ...options,
+        { label: "New Option", value: `option_${ts}` },
+      ],
+    });
+  }
+
+  function updateOption(index: number, updates: Partial<FieldOption>) {
+    onUpdate({
+      options: options.map((o, i) =>
+        i === index ? { ...o, ...updates } : o
+      ),
+    });
+  }
+
+  function removeOption(index: number) {
+    onUpdate({ options: options.filter((_, i) => i !== index) });
+  }
 
   return (
     <TooltipProvider>
@@ -115,39 +154,48 @@ export function FieldCard({
               />
             </div>
 
-            {/* Type + Placeholder row */}
-            <div className="flex items-start gap-4">
-              {/* Type Toggle */}
-              <div className="flex-shrink-0">
-                <span className="text-xs font-black uppercase tracking-wide text-ink block mb-1">
-                  Type
-                </span>
-                <div className="flex border-2 border-ink overflow-hidden">
+            {/* Type Selector — 4 options */}
+            <div>
+              <span className="text-xs font-black uppercase tracking-wide text-ink block mb-1">
+                Type
+              </span>
+              <div className="flex border-2 border-ink overflow-hidden">
+                {FIELD_TYPES.map((ft, i) => (
                   <button
-                    onClick={() => onUpdate({ type: "short" })}
-                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors ${
-                      field.type === "short"
+                    key={ft.value}
+                    onClick={() => {
+                      const updates: Partial<FormField> = { type: ft.value };
+                      // Initialize options when switching to select type
+                      if (
+                        (ft.value === "singleselect" || ft.value === "multiselect") &&
+                        !field.options?.length
+                      ) {
+                        updates.options = [];
+                      }
+                      // Clear options when switching away
+                      if (ft.value === "short" || ft.value === "paragraph") {
+                        updates.options = undefined;
+                        updates.branching = undefined;
+                      }
+                      onUpdate(updates);
+                    }}
+                    className={`flex-1 px-2 py-1.5 text-xs font-black uppercase tracking-wide transition-colors ${
+                      i > 0 ? "border-l-2 border-ink" : ""
+                    } ${
+                      field.type === ft.value
                         ? "bg-ink text-chalk"
                         : "bg-chalk text-ink hover:bg-pop-lime"
                     }`}
                   >
-                    Short
+                    {ft.label}
                   </button>
-                  <button
-                    onClick={() => onUpdate({ type: "paragraph" })}
-                    className={`px-3 py-1.5 text-xs font-black uppercase tracking-wide transition-colors border-l-2 border-ink ${
-                      field.type === "paragraph"
-                        ? "bg-ink text-chalk"
-                        : "bg-chalk text-ink hover:bg-pop-lime"
-                    }`}
-                  >
-                    Long
-                  </button>
-                </div>
+                ))}
               </div>
+            </div>
 
-              {/* Placeholder */}
-              <div className="flex-1">
+            {/* Placeholder (text types only) */}
+            {!isSelectType && (
+              <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-black uppercase tracking-wide text-ink">
                     Placeholder
@@ -173,7 +221,111 @@ export function FieldCard({
                   className="text-sm font-bold border-2 border-ink bg-chalk"
                 />
               </div>
-            </div>
+            )}
+
+            {/* Options Editor (select types) */}
+            {isSelectType && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wide text-ink">
+                    Options
+                  </span>
+                  <span className="text-xs font-bold text-ink/40">
+                    {options.length}/{MAX_OPTIONS}
+                  </span>
+                </div>
+
+                {options.map((opt, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-ink/30 w-4 text-right">
+                      {idx + 1}
+                    </span>
+                    <Input
+                      value={opt.label}
+                      onChange={(e) => {
+                        const label = e.target.value;
+                        const value = label
+                          .toLowerCase()
+                          .replace(/\s+/g, "_")
+                          .replace(/[^a-z0-9_]/g, "");
+                        updateOption(idx, { label, value });
+                      }}
+                      placeholder="Option label"
+                      className="flex-1 text-xs font-bold border-2 border-ink bg-white py-1"
+                    />
+
+                    {/* Per-option routing (singleselect with branching only) */}
+                    {field.type === "singleselect" && field.branching && (
+                      <select
+                        value={
+                          opt.next_step === null || opt.next_step === undefined
+                            ? "next"
+                            : opt.next_step === -1
+                            ? "end"
+                            : String(opt.next_step)
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const ns =
+                            val === "next"
+                              ? null
+                              : val === "end"
+                              ? -1
+                              : parseInt(val);
+                          updateOption(idx, { next_step: ns });
+                        }}
+                        className="text-[10px] font-bold border-2 border-ink bg-white px-1 py-1 w-28"
+                      >
+                        <option value="next">Next</option>
+                        <option value="end">End</option>
+                        {steps
+                          .filter((s) => s.position !== currentStepPosition)
+                          .map((s) => (
+                            <option key={s.id} value={s.position}>
+                              Step {s.position + 1}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+
+                    <button
+                      onClick={() => removeOption(idx)}
+                      className="text-ink/30 hover:text-pop-pink"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+
+                <Button
+                  variant="outline"
+                  onClick={addOption}
+                  disabled={options.length >= MAX_OPTIONS}
+                  className="w-full border-2 border-dashed border-ink/30 bg-white font-bold text-xs py-1 h-auto hover:bg-pop-lime hover:border-ink"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Option
+                </Button>
+
+                {/* Branching toggle (singleselect only) */}
+                {field.type === "singleselect" && (
+                  <div className="flex items-center gap-2 pt-1 border-t border-ink/10">
+                    <Switch
+                      checked={field.branching || false}
+                      onCheckedChange={(checked) =>
+                        onUpdate({ branching: checked })
+                      }
+                    />
+                    <span className="text-xs font-black uppercase tracking-wide text-ink">
+                      Branching
+                    </span>
+                    <span className="text-[10px] text-ink/40">
+                      Route to different steps per option
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Required + Delete row */}
             <div className="flex items-center justify-between">

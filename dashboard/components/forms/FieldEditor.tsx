@@ -23,8 +23,10 @@ import {
 
 interface FieldEditorProps {
   step: FormStep;
+  steps: FormStep[];
   onTitleChange: (title: string) => void;
   onFieldsChange: (fields: FormField[]) => void;
+  onNextStepChange: (next_step: number | null) => void;
 }
 
 const LOCKED_KEYS = ["dob", "email"];
@@ -33,8 +35,10 @@ const MAX_TITLE_LENGTH = 45;
 
 export function FieldEditor({
   step,
+  steps,
   onTitleChange,
   onFieldsChange,
+  onNextStepChange,
 }: FieldEditorProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -123,6 +127,8 @@ export function FieldEditor({
                   key={field.key}
                   field={field}
                   isLocked={LOCKED_KEYS.includes(field.key)}
+                  steps={steps}
+                  currentStepPosition={step.position}
                   onUpdate={(updates) => updateField(field.key, updates)}
                   onRemove={() => removeField(field.key)}
                 />
@@ -144,6 +150,41 @@ export function FieldEditor({
             Add Field {atLimit && "(max 5)"}
           </Button>
         </div>
+
+        {/* Next Step Routing */}
+        {steps.length > 1 && (
+          <div className="border-t-2 border-ink/10 pt-4">
+            <label className="text-xs font-black uppercase tracking-wide text-ink block mb-1.5">
+              After this step, go to:
+            </label>
+            <select
+              value={
+                step.next_step === null
+                  ? "next"
+                  : step.next_step === -1
+                  ? "end"
+                  : String(step.next_step)
+              }
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "next") onNextStepChange(null);
+                else if (val === "end") onNextStepChange(-1);
+                else onNextStepChange(parseInt(val));
+              }}
+              className="w-full text-sm font-bold border-2 border-ink bg-chalk px-3 py-2"
+            >
+              <option value="next">Next in order</option>
+              <option value="end">End form (submit)</option>
+              {steps
+                .filter((s) => s.position !== step.position)
+                .map((s) => (
+                  <option key={s.id} value={s.position}>
+                    Step {s.position + 1}: {s.title}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
       </div>
   );
 }

@@ -53,7 +53,10 @@ export function FormBuilderClient({
       form_id: form.id,
       position: steps.length,
       title: "New Step",
+      step_type: "fields",
       fields: [],
+      options: null,
+      next_step: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -64,8 +67,23 @@ export function FormBuilderClient({
 
   function handleDeleteStep(stepId: string) {
     setSteps((prev) => {
+      const deletedStep = prev.find((s) => s.id === stepId);
+      const deletedPos = deletedStep?.position ?? -1;
       const filtered = prev.filter((s) => s.id !== stepId);
-      return filtered.map((s, i) => ({ ...s, position: i }));
+      // Reindex positions and null out any routing references to the deleted step
+      return filtered.map((s, i) => {
+        let next_step = s.next_step;
+        if (next_step === deletedPos) next_step = null;
+
+        let options = s.options;
+        if (options) {
+          options = options.map((o) =>
+            o.next_step === deletedPos ? { ...o, next_step: null } : o
+          );
+        }
+
+        return { ...s, position: i, next_step, options };
+      });
     });
     if (selectedStepId === stepId) {
       setSelectedStepId(() => {
@@ -77,7 +95,32 @@ export function FormBuilderClient({
   }
 
   function handleReorderSteps(reorderedSteps: FormStep[]) {
-    setSteps(reorderedSteps.map((s, i) => ({ ...s, position: i })));
+    // Build position remap: oldPosition → newPosition
+    const posMap = new Map<number, number>();
+    reorderedSteps.forEach((s, newIdx) => {
+      if (s.position !== newIdx) posMap.set(s.position, newIdx);
+    });
+
+    setSteps(
+      reorderedSteps.map((s, i) => {
+        let next_step = s.next_step;
+        if (next_step !== null && posMap.has(next_step)) {
+          next_step = posMap.get(next_step)!;
+        }
+
+        let options = s.options;
+        if (options) {
+          options = options.map((o) => {
+            if (o.next_step !== null && posMap.has(o.next_step)) {
+              return { ...o, next_step: posMap.get(o.next_step)! };
+            }
+            return o;
+          });
+        }
+
+        return { ...s, position: i, next_step, options };
+      })
+    );
     markDirty();
   }
 
@@ -97,6 +140,17 @@ export function FormBuilderClient({
       if (!selectedStepId) return;
       setSteps((prev) =>
         prev.map((s) => (s.id === selectedStepId ? { ...s, fields } : s))
+      );
+      markDirty();
+    },
+    [selectedStepId]
+  );
+
+  const handleNextStepChange = useCallback(
+    (next_step: number | null) => {
+      if (!selectedStepId) return;
+      setSteps((prev) =>
+        prev.map((s) => (s.id === selectedStepId ? { ...s, next_step } : s))
       );
       markDirty();
     },
@@ -127,6 +181,9 @@ export function FormBuilderClient({
           steps: steps.map((s) => ({
             title: s.title,
             fields: s.fields,
+            step_type: s.step_type || "fields",
+            options: s.options || null,
+            next_step: s.next_step ?? null,
           })),
         }),
       });
@@ -270,13 +327,15 @@ export function FormBuilderClient({
           />
         </div>
 
-        {/* Column 2: Field Editor */}
+        {/* Column 2: Field Editor / Select Editor */}
         <div className="flex-1 overflow-y-auto p-6 bg-chalk/50">
           {selectedStep ? (
             <FieldEditor
               step={selectedStep}
+              steps={steps}
               onTitleChange={handleStepTitleChange}
               onFieldsChange={handleFieldsChange}
+              onNextStepChange={handleNextStepChange}
             />
           ) : (
             <div className="flex items-center justify-center h-full">

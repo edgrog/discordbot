@@ -20,8 +20,16 @@ export interface FormSettings {
   dm_approve_template?: string;
   dm_reject_template?: string;
   admin_channel_id?: string;
+  apply_channel_id?: string;
+  apply_message_id?: string;
   has_categories?: boolean;
   categories?: Record<string, { label: string; emoji: string }>;
+}
+
+export interface SelectOption {
+  label: string;
+  value: string;
+  next_step: number | null;
 }
 
 export interface FormStep {
@@ -29,17 +37,28 @@ export interface FormStep {
   form_id: string;
   position: number;
   title: string;
+  step_type: "fields" | "select";
   fields: FormField[];
+  options: SelectOption[] | null;
+  next_step: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface FieldOption {
+  label: string;
+  value: string;
+  next_step?: number | null;
 }
 
 export interface FormField {
   key: string;
   label: string;
-  type: "short" | "paragraph";
+  type: "short" | "paragraph" | "singleselect" | "multiselect";
   required: boolean;
   placeholder?: string;
+  options?: FieldOption[];
+  branching?: boolean;
 }
 
 export interface Submission {
