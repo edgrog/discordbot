@@ -1,6 +1,7 @@
 "use client";
 
 import { FormField, FieldOption, FormStep } from "@/lib/types";
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,10 @@ interface FieldCardProps {
   currentStepPosition: number;
   onUpdate: (updates: Partial<FormField>) => void;
   onRemove: () => void;
-  onCreateStep: (title?: string) => number;
+  onCreateStep: (title?: string, asBranchTarget?: boolean) => number;
 }
 
-const MAX_LABEL = 45;
+const MAX_LABEL = 256;
 const MAX_PLACEHOLDER = 100;
 const MAX_OPTIONS = 25;
 
@@ -45,6 +46,69 @@ const FIELD_TYPES: { value: FormField["type"]; label: string }[] = [
   { value: "singleselect", label: "Select" },
   { value: "multiselect", label: "Multi" },
 ];
+
+function BranchingToggle({
+  field,
+  onUpdate,
+}: {
+  field: FormField;
+  onUpdate: (updates: Partial<FormField>) => void;
+}) {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const hasRoutes = field.options?.some(
+    (o) => o.next_step !== null && o.next_step !== undefined
+  );
+
+  function handleToggle(checked: boolean) {
+    if (!checked && hasRoutes) {
+      setShowConfirm(true);
+    } else {
+      onUpdate({ branching: checked });
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 pt-1 border-t border-ink/10">
+      <Switch
+        checked={field.branching || false}
+        onCheckedChange={handleToggle}
+      />
+      <span className="text-xs font-black uppercase tracking-wide text-ink">
+        Branching
+      </span>
+      <span className="text-[10px] text-ink/40">
+        Route to different steps per option
+      </span>
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disable branching?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all per-option routing you&apos;ve configured.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onUpdate({
+                  branching: false,
+                  options: field.options?.map((o) => ({
+                    ...o,
+                    next_step: undefined,
+                  })),
+                });
+              }}
+              className="bg-pop-pink hover:bg-pop-pink/80 text-white border-2 border-ink font-black uppercase tracking-wide"
+            >
+              Disable
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
 
 export function FieldCard({
   field,
@@ -269,7 +333,7 @@ export function FieldCard({
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val === "__new__") {
-                            const pos = onCreateStep(opt.label);
+                            const pos = onCreateStep(opt.label, true);
                             updateOption(idx, { next_step: pos });
                           } else {
                             const ns =
@@ -289,7 +353,7 @@ export function FieldCard({
                           .filter((s) => s.position !== currentStepPosition)
                           .map((s) => (
                             <option key={s.id} value={s.position}>
-                              → {s.title || `Step ${s.position + 1}`}
+                              → [{s.position + 1}] {s.title || "Untitled"}
                             </option>
                           ))}
                         <option value="__new__">+ New step</option>
@@ -317,20 +381,7 @@ export function FieldCard({
 
                 {/* Branching toggle (singleselect only) */}
                 {field.type === "singleselect" && (
-                  <div className="flex items-center gap-2 pt-1 border-t border-ink/10">
-                    <Switch
-                      checked={field.branching || false}
-                      onCheckedChange={(checked) =>
-                        onUpdate({ branching: checked })
-                      }
-                    />
-                    <span className="text-xs font-black uppercase tracking-wide text-ink">
-                      Branching
-                    </span>
-                    <span className="text-[10px] text-ink/40">
-                      Route to different steps per option
-                    </span>
-                  </div>
+                  <BranchingToggle field={field} onUpdate={onUpdate} />
                 )}
               </div>
             )}

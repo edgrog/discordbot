@@ -877,23 +877,31 @@ async function finalizeThreadSubmission(threadId, supabase, client, log) {
     formName: form.name,
   });
 
-  // Build admin embed
-  const EMBED_FIELD_MAX = 1024;
-  const answerFields = Object.entries(session.answers).map(([key, value]) => ({
+  // Build admin embed — concise summary with link to full details
+  const EMBED_FIELD_MAX = 256;
+  const MAX_PREVIEW_FIELDS = 6;
+  const allAnswers = Object.entries(session.answers);
+
+  // Show first N fields as a quick summary
+  const previewFields = allAnswers.slice(0, MAX_PREVIEW_FIELDS).map(([key, value]) => ({
     name: key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     value: String(value || '—').slice(0, EMBED_FIELD_MAX),
     inline: String(value).length < 50,
   }));
 
+  const remaining = allAnswers.length - MAX_PREVIEW_FIELDS;
+
   const adminEmbed = new EmbedBuilder()
     .setColor(0xFFD700)
     .setTitle(`New Submission: ${form.name}`)
     .setDescription(`By <@${session.discord_id}> (${username})`)
-    .addFields(answerFields.slice(0, 25))
-    .setFooter({ text: `Submission ID: ${submission.id} | Form: ${form.name}` })
+    .addFields(previewFields)
+    .setFooter({ text: remaining > 0
+      ? `+ ${remaining} more field${remaining !== 1 ? 's' : ''} — view full submission on dashboard`
+      : `Submission ID: ${submission.id}` })
     .setTimestamp();
 
-  const buttons = new ActionRowBuilder().addComponents(
+  const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`approve_${submission.id}_${session.discord_id}_${session.form_id}`)
       .setLabel('Approve')
@@ -903,6 +911,19 @@ async function finalizeThreadSubmission(threadId, supabase, client, log) {
       .setLabel('Reject')
       .setStyle(ButtonStyle.Danger),
   );
+
+  // Add "View Details" link button if dashboard URL is configured
+  const dashboardUrl = process.env.DASHBOARD_URL;
+  if (dashboardUrl) {
+    actionRow.addComponents(
+      new ButtonBuilder()
+        .setLabel('View Details')
+        .setStyle(ButtonStyle.Link)
+        .setURL(`${dashboardUrl}/submissions?id=${submission.id}`)
+    );
+  }
+
+  const buttons = actionRow;
 
   const adminChannelId = form.settings?.admin_channel_id || process.env.ADMIN_CHANNEL_ID;
   const adminChannel = client.channels.cache.get(adminChannelId);

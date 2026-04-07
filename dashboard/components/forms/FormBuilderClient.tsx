@@ -47,17 +47,17 @@ export function FormBuilderClient({
     markDirty();
   }
 
-  function handleAddStep(title?: string, selectAfterCreate = true): number {
+  function handleAddStep(title?: string, selectAfterCreate = true, asBranchTarget = false): number {
     const position = steps.length;
     const newStep: FormStep = {
       id: `new_${Date.now()}`,
       form_id: form.id,
       position,
-      title: title || "New Step",
+      title: title || `Step ${position + 1}`,
       step_type: "fields",
       fields: [],
       options: null,
-      next_step: null,
+      next_step: asBranchTarget ? -1 : null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -421,7 +421,7 @@ export function FormBuilderClient({
               onDescriptionChange={handleStepDescriptionChange}
               onFieldsChange={handleFieldsChange}
               onNextStepChange={handleNextStepChange}
-              onCreateStep={(title) => handleAddStep(title, false)}
+              onCreateStep={(title, asBranchTarget) => handleAddStep(title, false, asBranchTarget)}
             />
           ) : (
             <div className="flex items-center justify-center h-full">

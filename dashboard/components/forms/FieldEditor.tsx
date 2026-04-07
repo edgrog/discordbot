@@ -28,7 +28,7 @@ interface FieldEditorProps {
   onDescriptionChange: (description: string) => void;
   onFieldsChange: (fields: FormField[]) => void;
   onNextStepChange: (next_step: number | null) => void;
-  onCreateStep: (title?: string) => number;
+  onCreateStep: (title?: string, asBranchTarget?: boolean) => number;
 }
 
 const LOCKED_KEYS = ["dob", "email"];
@@ -203,7 +203,7 @@ export function FieldEditor({
                 if (val === "next") onNextStepChange(null);
                 else if (val === "end") onNextStepChange(-1);
                 else if (val === "__new__") {
-                  const pos = onCreateStep();
+                  const pos = onCreateStep(undefined, true);
                   onNextStepChange(pos);
                 } else onNextStepChange(parseInt(val));
               }}
@@ -215,7 +215,7 @@ export function FieldEditor({
                 .filter((s) => s.position !== step.position)
                 .map((s) => (
                   <option key={s.id} value={s.position}>
-                    → {s.title || `Step ${s.position + 1}`}
+                    → [{s.position + 1}] {s.title || "Untitled"}
                   </option>
                 ))}
               <option value="__new__">+ Create new step</option>
