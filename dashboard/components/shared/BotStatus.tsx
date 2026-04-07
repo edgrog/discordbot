@@ -41,11 +41,19 @@ export function BotStatus() {
   }
 
   function getStatusLabel() {
-    if (!heartbeat) return "No heartbeat";
+    if (!heartbeat) return "Waiting for bot";
     const diff = Date.now() - new Date(heartbeat).getTime();
     if (diff < 2 * 60 * 1000) return "Bot online";
     if (diff < 5 * 60 * 1000) return "Bot slow";
     return "Bot offline";
+  }
+
+  function getStatusHint() {
+    if (!heartbeat) return "Bot hasn't connected yet — check Railway deployment";
+    const diff = Date.now() - new Date(heartbeat).getTime();
+    if (diff < 2 * 60 * 1000) return undefined;
+    if (diff < 5 * 60 * 1000) return "Bot is responding slowly";
+    return "Bot may be down — check Railway logs";
   }
 
   return (
@@ -59,12 +67,19 @@ export function BotStatus() {
               : ""
           }`}
         />
-        <span className="text-xs text-[#9CA3AF]">{getStatusLabel()}</span>
+        <span className="text-xs text-[#9CA3AF]" title={getStatusHint()}>
+          {getStatusLabel()}
+        </span>
       </div>
       {formsLoaded && (
         <p className="text-xs text-[#6B7280] ml-4">
           Forms loaded{" "}
           {formatDistanceToNow(new Date(formsLoaded), { addSuffix: true })}
+        </p>
+      )}
+      {!heartbeat && (
+        <p className="text-[10px] text-[#6B7280] ml-4">
+          Check your bot hosting is running
         </p>
       )}
     </div>

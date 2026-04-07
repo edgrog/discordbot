@@ -32,7 +32,7 @@ interface FieldEditorProps {
 }
 
 const LOCKED_KEYS = ["dob", "email"];
-const MAX_FIELDS = 5;
+const MAX_FIELDS = 20;
 const MAX_TITLE_LENGTH = 45;
 const MAX_DESCRIPTION_LENGTH = 500;
 
@@ -143,7 +143,20 @@ export function FieldEditor({
           />
         </div>
 
-        {/* Fields */}
+        {/* Fields header with counter */}
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-black uppercase tracking-wide text-ink">
+            Fields
+          </label>
+          <span
+            className={`text-xs font-bold ${
+              atLimit ? "text-pop-pink font-black" : "text-ink/40"
+            }`}
+          >
+            {step.fields.length}/{MAX_FIELDS}
+          </span>
+        </div>
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -177,10 +190,10 @@ export function FieldEditor({
             onClick={addField}
             disabled={atLimit}
             className="w-full border-2 border-dashed border-ink bg-chalk font-black uppercase tracking-wide hover:bg-pop-lime hover:text-ink hover:border-solid"
-            title={atLimit ? "Discord limit: max 5 fields per step" : undefined}
+            title={atLimit ? "Max 20 fields per step — split into multiple steps for longer sections" : undefined}
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Field {atLimit && "(max 5)"}
+            Add Field {atLimit && `(${MAX_FIELDS} max)`}
           </Button>
         </div>
 

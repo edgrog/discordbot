@@ -173,8 +173,13 @@ export default function SettingsPage() {
                     <DialogHeader>
                       <DialogTitle className="font-black uppercase tracking-wide text-ink">Approval DM Preview</DialogTitle>
                     </DialogHeader>
-                    <div className="bg-ink text-[#BFFF00] p-4 font-mono text-sm whitespace-pre-wrap border-2 border-ink">
-                      {previewTemplate(settings.dm_approve_template || "")}
+                    <div className="bg-ink text-[#BFFF00] p-4 font-mono text-sm whitespace-pre-wrap border-2 border-ink min-h-[60px]">
+                      {previewTemplate(settings.dm_approve_template || "") || (
+                        <span className="text-chalk/30 italic">
+                          No message set. Add text above to preview.{"\n"}
+                          Example: Hey {"{name}"}, you&apos;ve been approved! 🎉
+                        </span>
+                      )}
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -202,8 +207,13 @@ export default function SettingsPage() {
                     <DialogHeader>
                       <DialogTitle className="font-black uppercase tracking-wide text-ink">Rejection DM Preview</DialogTitle>
                     </DialogHeader>
-                    <div className="bg-ink text-[#FF3366] p-4 font-mono text-sm whitespace-pre-wrap border-2 border-ink">
-                      {previewTemplate(settings.dm_reject_template || "")}
+                    <div className="bg-ink text-[#FF3366] p-4 font-mono text-sm whitespace-pre-wrap border-2 border-ink min-h-[60px]">
+                      {previewTemplate(settings.dm_reject_template || "") || (
+                        <span className="text-chalk/30 italic">
+                          No message set. Add text above to preview.{"\n"}
+                          Example: Hey {"{name}"}, thanks for applying but we&apos;ll pass for now.
+                        </span>
+                      )}
                     </div>
                   </DialogContent>
                 </Dialog>

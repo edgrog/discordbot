@@ -320,11 +320,11 @@ export function FormBuilderClient({
         </div>
       </div>
 
-      {/* Unsaved changes banner */}
+      {/* Unsaved changes indicator — subtle, inline with header */}
       {hasUnsavedChanges && (
-        <div className="bg-pop-orange/20 border-b-2 border-pop-orange/40 px-4 py-2 flex-shrink-0">
-          <span className="text-xs font-black uppercase tracking-wide text-ink">
-            Unsaved changes — save before deploying
+        <div className="bg-ink/5 border-b border-ink/10 px-4 py-1.5 flex-shrink-0">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-ink/50">
+            ● Unsaved changes
           </span>
         </div>
       )}
@@ -369,9 +369,9 @@ export function FormBuilderClient({
                 }));
                 markDirty();
               }}
-              placeholder="Welcome! We'll walk you through..."
+              placeholder="Welcome! We'll walk you through the application step by step..."
               rows={3}
-              className="w-full text-xs font-bold border-2 border-ink bg-chalk px-2 py-1.5 resize-none"
+              className="w-full text-xs font-bold border-2 border-ink bg-chalk px-2 py-1.5 resize-none placeholder:font-normal placeholder:italic placeholder:text-ink/30"
             />
             <p className="text-[10px] text-ink/40 mt-1">
               Shown when a user starts an application
@@ -392,9 +392,9 @@ export function FormBuilderClient({
                 }));
                 markDirty();
               }}
-              placeholder="Thanks for applying! We'll review..."
+              placeholder="Thanks for applying! We'll review your application and be in touch soon 🎉"
               rows={3}
-              className="w-full text-xs font-bold border-2 border-ink bg-chalk px-2 py-1.5 resize-none"
+              className="w-full text-xs font-bold border-2 border-ink bg-chalk px-2 py-1.5 resize-none placeholder:font-normal placeholder:italic placeholder:text-ink/30"
             />
             <p className="text-[10px] text-ink/40 mt-1">
               Shown after submission is confirmed

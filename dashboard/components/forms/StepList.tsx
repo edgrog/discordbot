@@ -94,7 +94,10 @@ function SortableStepItem({
         className="flex-1 text-left py-2 pr-1"
       >
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold truncate">
+          <span
+            className="text-sm font-bold truncate"
+            title={step.title}
+          >
             {step.position + 1}. {step.title}
           </span>
           <span
