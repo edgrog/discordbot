@@ -220,9 +220,11 @@ export function FormBuilderClient({
   // --- Deploy ---
 
   async function handleDeploy() {
+    // Auto-save before deploying
     if (hasUnsavedChanges) {
-      toast.error("Save your changes before deploying");
-      return;
+      await handleSave();
+      // If save failed, hasUnsavedChanges will still be true
+      if (hasUnsavedChanges) return;
     }
 
     setIsDeploying(true);
@@ -293,7 +295,7 @@ export function FormBuilderClient({
           </Button>
           <Button
             onClick={handleDeploy}
-            disabled={isDeploying || hasUnsavedChanges}
+            disabled={isDeploying}
             className="bg-pop-lime text-ink border-2 border-ink font-black uppercase tracking-wide hover:bg-pop-lime/80 disabled:opacity-40"
           >
             {isDeploying ? (
@@ -308,9 +310,9 @@ export function FormBuilderClient({
 
       {/* Unsaved changes banner */}
       {hasUnsavedChanges && (
-        <div className="bg-pop-lime/20 border-b-2 border-ink px-4 py-2 flex-shrink-0">
+        <div className="bg-pop-orange/20 border-b-2 border-pop-orange/40 px-4 py-2 flex-shrink-0">
           <span className="text-xs font-black uppercase tracking-wide text-ink">
-            Unsaved changes
+            Unsaved changes — save before deploying
           </span>
         </div>
       )}

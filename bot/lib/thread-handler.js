@@ -54,7 +54,7 @@ async function postApplyEmbed(client, supabase, form, log) {
     .setColor(0x5865F2)
     .setTitle(form.name || 'Apply Now')
     .setDescription(form.description || 'Click the button below to start your application.')
-    .setFooter({ text: 'Powered by Formie' })
+    .setFooter({ text: `Powered by Formie • Updated ${new Date().toLocaleDateString()}` })
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(

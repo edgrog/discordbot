@@ -98,11 +98,13 @@ function SortableStepItem({
             {step.position + 1}. {step.title}
           </span>
           <span
-            className={`text-xs font-black ml-2 flex-shrink-0 ${
+            className={`text-xs font-bold ml-2 flex-shrink-0 ${
               isSelected ? "text-chalk/60" : "text-ink/40"
             }`}
           >
-            {step.fields.length}f
+            {step.fields.length === 0
+              ? "empty"
+              : `${step.fields.length} field${step.fields.length !== 1 ? "s" : ""}`}
           </span>
         </div>
       </button>
