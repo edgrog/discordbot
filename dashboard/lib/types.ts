@@ -24,6 +24,8 @@ export interface FormSettings {
   apply_message_id?: string;
   has_categories?: boolean;
   categories?: Record<string, { label: string; emoji: string }>;
+  intro_message?: string;
+  completion_message?: string;
 }
 
 export interface SelectOption {
@@ -37,6 +39,7 @@ export interface FormStep {
   form_id: string;
   position: number;
   title: string;
+  description?: string;
   step_type: "fields" | "select";
   fields: FormField[];
   options: SelectOption[] | null;

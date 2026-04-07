@@ -277,6 +277,7 @@ function getFlattenedFields(formId) {
           branching: step.options.some(o => o.next_step !== null && o.next_step !== undefined),
         },
         stepTitle: step.title,
+        stepDescription: step.description || null,
       });
     } else {
       const fields = step.fields || [];
@@ -287,6 +288,7 @@ function getFlattenedFields(formId) {
           stepPosition,
           field: fields[fi],
           stepTitle: step.title,
+          stepDescription: step.description || null,
         });
       }
     }

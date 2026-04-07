@@ -137,6 +137,17 @@ export function FormBuilderClient({
     [selectedStepId]
   );
 
+  const handleStepDescriptionChange = useCallback(
+    (description: string) => {
+      if (!selectedStepId) return;
+      setSteps((prev) =>
+        prev.map((s) => (s.id === selectedStepId ? { ...s, description } : s))
+      );
+      markDirty();
+    },
+    [selectedStepId]
+  );
+
   const handleFieldsChange = useCallback(
     (fields: FormField[]) => {
       if (!selectedStepId) return;
@@ -182,6 +193,7 @@ export function FormBuilderClient({
         body: JSON.stringify({
           steps: steps.map((s) => ({
             title: s.title,
+            description: s.description || null,
             fields: s.fields,
             step_type: s.step_type || "fields",
             options: s.options || null,
@@ -343,6 +355,52 @@ export function FormBuilderClient({
             </p>
           </div>
 
+          {/* Intro Message */}
+          <div className="mb-4 pb-3 border-b-2 border-ink/10">
+            <label className="text-xs font-black uppercase tracking-wide text-ink block mb-1">
+              Intro Message
+            </label>
+            <textarea
+              value={form.settings?.intro_message || ""}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  settings: { ...prev.settings, intro_message: e.target.value },
+                }));
+                markDirty();
+              }}
+              placeholder="Welcome! We'll walk you through..."
+              rows={3}
+              className="w-full text-xs font-bold border-2 border-ink bg-chalk px-2 py-1.5 resize-none"
+            />
+            <p className="text-[10px] text-ink/40 mt-1">
+              Shown when a user starts an application
+            </p>
+          </div>
+
+          {/* Completion Message */}
+          <div className="mb-4 pb-3 border-b-2 border-ink/10">
+            <label className="text-xs font-black uppercase tracking-wide text-ink block mb-1">
+              Completion Message
+            </label>
+            <textarea
+              value={form.settings?.completion_message || ""}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  settings: { ...prev.settings, completion_message: e.target.value },
+                }));
+                markDirty();
+              }}
+              placeholder="Thanks for applying! We'll review..."
+              rows={3}
+              className="w-full text-xs font-bold border-2 border-ink bg-chalk px-2 py-1.5 resize-none"
+            />
+            <p className="text-[10px] text-ink/40 mt-1">
+              Shown after submission is confirmed
+            </p>
+          </div>
+
           <StepList
             steps={steps}
             selectedStepId={selectedStepId}
@@ -360,6 +418,7 @@ export function FormBuilderClient({
               step={selectedStep}
               steps={steps}
               onTitleChange={handleStepTitleChange}
+              onDescriptionChange={handleStepDescriptionChange}
               onFieldsChange={handleFieldsChange}
               onNextStepChange={handleNextStepChange}
               onCreateStep={(title) => handleAddStep(title, false)}

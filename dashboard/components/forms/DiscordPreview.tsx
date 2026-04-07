@@ -99,6 +99,11 @@ export function DiscordPreview({ step }: DiscordPreviewProps) {
             <p className="text-sm font-semibold text-white">
               📋 {step.title || "Untitled Step"}
             </p>
+            {step.description && (
+              <p className="text-xs text-[#B5BAC1] mt-1">
+                {step.description}
+              </p>
+            )}
           </div>
         </BotMessage>
 

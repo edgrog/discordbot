@@ -25,6 +25,7 @@ interface FieldEditorProps {
   step: FormStep;
   steps: FormStep[];
   onTitleChange: (title: string) => void;
+  onDescriptionChange: (description: string) => void;
   onFieldsChange: (fields: FormField[]) => void;
   onNextStepChange: (next_step: number | null) => void;
   onCreateStep: (title?: string) => number;
@@ -33,11 +34,13 @@ interface FieldEditorProps {
 const LOCKED_KEYS = ["dob", "email"];
 const MAX_FIELDS = 5;
 const MAX_TITLE_LENGTH = 45;
+const MAX_DESCRIPTION_LENGTH = 500;
 
 export function FieldEditor({
   step,
   steps,
   onTitleChange,
+  onDescriptionChange,
   onFieldsChange,
   onNextStepChange,
   onCreateStep,
@@ -110,6 +113,33 @@ export function FieldEditor({
               onTitleChange(e.target.value.slice(0, MAX_TITLE_LENGTH))
             }
             className="text-lg font-bold border-2 border-ink bg-chalk focus:ring-pop-lime"
+          />
+        </div>
+
+        {/* Step Description */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-black uppercase tracking-wide text-ink">
+              Step Description
+            </label>
+            <span
+              className={`text-xs font-bold ${
+                (step.description?.length || 0) >= MAX_DESCRIPTION_LENGTH
+                  ? "text-pop-pink font-black"
+                  : "text-ink/40"
+              }`}
+            >
+              {step.description?.length || 0}/{MAX_DESCRIPTION_LENGTH}
+            </span>
+          </div>
+          <textarea
+            value={step.description || ""}
+            onChange={(e) =>
+              onDescriptionChange(e.target.value.slice(0, MAX_DESCRIPTION_LENGTH))
+            }
+            placeholder="Optional instructions or context shown before questions in this step..."
+            rows={2}
+            className="w-full text-sm font-bold border-2 border-ink bg-chalk px-3 py-2 resize-none focus:ring-pop-lime focus:outline-none"
           />
         </div>
 

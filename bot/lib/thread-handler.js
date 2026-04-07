@@ -179,15 +179,14 @@ async function startThreadSession(interaction, formId, supabase, client, log) {
     ephemeral: true,
   });
 
-  // Welcome message in thread
+  // Welcome / intro message in thread
+  const introText = entry.form.settings?.intro_message ||
+    `Welcome! I'll walk you through the application step by step.\n\nAnswer each question as it comes — take your time. Your progress is saved automatically.\n\nLet's get started! 👇`;
+
   const welcomeEmbed = new EmbedBuilder()
     .setColor(0x5865F2)
-    .setTitle(`${entry.form.name}`)
-    .setDescription(
-      `Welcome! I'll walk you through the application step by step.\n\n` +
-      `Answer each question as it comes — take your time. Your progress is saved automatically.\n\n` +
-      `Let's get started! 👇`
-    );
+    .setTitle(entry.form.name)
+    .setDescription(introText);
 
   await thread.send({ embeds: [welcomeEmbed] });
 
@@ -235,7 +234,7 @@ async function askNextQuestion(threadId, supabase, client, log) {
     }
   }
 
-  const { field, stepTitle, stepIndex, fieldIndex } = allFields[currentIdx];
+  const { field, stepTitle, stepDescription, stepIndex, fieldIndex } = allFields[currentIdx];
 
   // Update session position
   session.current_step = stepIndex;
@@ -249,21 +248,26 @@ async function askNextQuestion(threadId, supabase, client, log) {
   const prevField = currentIdx > 0 ? allFields[currentIdx - 1] : null;
   if (!prevField || prevField.stepIndex !== stepIndex) {
     if (stepTitle) {
-      await thread.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x2B2D31)
-            .setTitle(`📋 ${stepTitle}`)
-        ],
-      });
+      const stepEmbed = new EmbedBuilder()
+        .setColor(0x2B2D31)
+        .setTitle(`📋 ${stepTitle}`);
+      if (stepDescription) {
+        stepEmbed.setDescription(stepDescription);
+      }
+      await thread.send({ embeds: [stepEmbed] });
     }
   }
 
   // Build question based on field type
+  const progress = currentIdx + 1;
+  const total = allFields.length;
+  const filledBlocks = Math.round((progress / total) * 8);
+  const progressBar = '▓'.repeat(filledBlocks) + '░'.repeat(8 - filledBlocks);
+
   const questionEmbed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setDescription(`**${field.label}**${field.required ? ' *' : ''}`)
-    .setFooter({ text: `Question ${currentIdx + 1} of ${allFields.length}` });
+    .setFooter({ text: `${progressBar}  ${progress} of ${total}` });
 
   if (field.type === 'short' || field.type === 'paragraph') {
     if (field.placeholder) {
@@ -919,7 +923,7 @@ async function finalizeThreadSubmission(threadId, supabase, client, log) {
   // Completion message in thread
   const thread = await client.channels.fetch(threadId);
   if (thread) {
-    const confirmMsg = form.settings?.confirmation_message ||
+    const confirmMsg = form.settings?.completion_message ||
       'Your application has been submitted! We\'ll review it and get back to you soon. 🎉';
     await thread.send({
       embeds: [

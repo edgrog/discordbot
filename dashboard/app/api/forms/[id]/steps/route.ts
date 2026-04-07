@@ -115,9 +115,10 @@ export async function PUT(
 
     // Re-insert all steps with correct positions
     if (steps.length > 0) {
-      const rows = steps.map((step: { title: string; fields: unknown[]; step_type?: string; options?: unknown; next_step?: number | null }, index: number) => ({
+      const rows = steps.map((step: { title: string; description?: string | null; fields: unknown[]; step_type?: string; options?: unknown; next_step?: number | null }, index: number) => ({
         form_id: formId,
         title: step.title,
+        description: step.description || null,
         fields: step.fields || [],
         position: index,
         step_type: step.step_type || "fields",
