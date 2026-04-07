@@ -274,15 +274,15 @@ export function FieldCard({
                               : parseInt(val);
                           updateOption(idx, { next_step: ns });
                         }}
-                        className="text-[10px] font-bold border-2 border-ink bg-white px-1 py-1 w-28"
+                        className="text-[10px] font-bold border-2 border-ink bg-white px-1 py-1 min-w-[120px]"
                       >
-                        <option value="next">Next</option>
-                        <option value="end">End</option>
+                        <option value="next">→ Next step</option>
+                        <option value="end">⏹ End form</option>
                         {steps
                           .filter((s) => s.position !== currentStepPosition)
                           .map((s) => (
                             <option key={s.id} value={s.position}>
-                              Step {s.position + 1}
+                              → {s.title || `Step ${s.position + 1}`}
                             </option>
                           ))}
                       </select>

@@ -3,10 +3,9 @@
   "configurations": [
     {
       "name": "Dashboard (Next.js)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000,
-      "cwd": "dashboard"
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/opt/homebrew/bin:$PATH && cd dashboard && npm run dev"],
+      "port": 3000
     },
     {
       "name": "Bot (Discord + Express API)",

@@ -148,24 +148,30 @@ async function startThreadSession(interaction, formId, supabase, client, log) {
   await thread.members.add(userId);
 
   // Insert session
+  const sessionData = {
+    thread_id: thread.id,
+    form_id: formId,
+    discord_id: userId,
+    guild_id: guildId,
+    current_step: 0,
+    current_field: 0,
+    answers: {},
+    status: 'in_progress',
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  };
+
   const { error: insertErr } = await supabase
     .from('application_sessions')
-    .insert({
-      thread_id: thread.id,
-      form_id: formId,
-      discord_id: userId,
-      guild_id: guildId,
-      current_step: 0,
-      current_field: 0,
-      answers: {},
-      status: 'in_progress',
-    });
+    .insert(sessionData);
 
   if (insertErr) {
     log('error', 'Failed to create session', { err: insertErr.message, userId, formId });
     await interaction.reply({ content: 'Something went wrong. Please try again.', ephemeral: true });
     return;
   }
+
+  // Cache session immediately so messageCreate can find it
+  cacheSession(thread.id, sessionData);
 
   // Reply in the main channel (ephemeral)
   await interaction.reply({
@@ -345,31 +351,51 @@ async function handleThreadMessage(message, supabase, log) {
   // Check cache first
   let session = sessionCache.get(threadId);
   if (!session) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('application_sessions')
       .select('*')
       .eq('thread_id', threadId)
       .eq('status', 'in_progress')
       .single();
 
+    if (error) {
+      log('debug', 'Session lookup failed', { threadId, err: error.message });
+      return;
+    }
     if (!data) return; // Not an active application thread
     session = data;
+    cacheSession(threadId, session);
   }
 
-  if (session.status !== 'in_progress') return;
+  if (session.status !== 'in_progress') {
+    log('debug', 'Session not in_progress', { threadId, status: session.status });
+    return;
+  }
   if (session.discord_id !== message.author.id) return; // Only the applicant can answer
 
   // Get current field
   const allFields = getFlattenedFields(session.form_id);
+  if (allFields.length === 0) {
+    log('warn', 'No fields found for form in thread message handler', { threadId, formId: session.form_id });
+    await message.reply({ content: 'Something went wrong loading the form. Please try `/reload-forms` or start a new application.' });
+    return;
+  }
+
   const currentIdx = allFields.findIndex(
     f => f.stepIndex === session.current_step && f.fieldIndex === session.current_field
   );
-  if (currentIdx === -1) return;
+  if (currentIdx === -1) {
+    log('warn', 'Current field not found', { threadId, step: session.current_step, field: session.current_field });
+    return;
+  }
 
   const { field } = allFields[currentIdx];
 
   // Only accept text messages for text fields
-  if (field.type !== 'short' && field.type !== 'paragraph') return;
+  if (field.type !== 'short' && field.type !== 'paragraph') {
+    await message.reply({ content: 'Please use the buttons above to answer this question.' });
+    return;
+  }
 
   const answer = message.content.trim();
   if (!answer && field.required) {
@@ -482,28 +508,29 @@ async function handleThreadButton(interaction, supabase, log) {
     );
     const currentField = currentIdx >= 0 ? allFields[currentIdx].field : null;
 
-    let nextStepIndex = null;
+    let branchTarget = null; // position value from option routing
     if (currentField?.branching && currentField.options) {
       const chosen = currentField.options.find(o => o.value === optionValue);
       if (chosen?.next_step !== null && chosen?.next_step !== undefined) {
-        nextStepIndex = chosen.next_step;
+        branchTarget = chosen.next_step;
       }
     }
 
     // Advance to next field
-    if (nextStepIndex !== null && nextStepIndex !== undefined) {
+    if (branchTarget !== null && branchTarget !== undefined) {
       // Branch to specific step
-      if (nextStepIndex === -1) {
+      if (branchTarget === -1) {
         // End form
         session.current_step = 999;
         session.current_field = 0;
       } else {
-        // Find first field in target step
-        const targetField = allFields.find(f => f.stepIndex === nextStepIndex);
+        // Find first field in target step by position (not array index)
+        const targetField = allFields.find(f => f.stepPosition === branchTarget);
         if (targetField) {
           session.current_step = targetField.stepIndex;
           session.current_field = targetField.fieldIndex;
         } else {
+          log('warn', 'Branch target step not found', { branchTarget, formId: session.form_id });
           session.current_step = 999;
           session.current_field = 0;
         }
@@ -976,8 +1003,8 @@ function checkBranching(allFields, currentIdx, session) {
         if (chosen?.next_step !== null && chosen?.next_step !== undefined) {
           if (chosen.next_step === -1) return null; // End form
 
-          // Find first field in target step
-          const target = allFields.find(af => af.stepIndex === chosen.next_step);
+          // Find first field in target step by position (not array index)
+          const target = allFields.find(af => af.stepPosition === chosen.next_step);
           if (target) return { stepIndex: target.stepIndex, fieldIndex: target.fieldIndex };
         }
       }

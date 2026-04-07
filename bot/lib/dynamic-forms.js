@@ -251,7 +251,7 @@ function resolveNextStep(formId, currentStepIndex, selectedValue) {
 /**
  * Get a flat list of all fields across all steps for a form.
  * Legacy step_type="select" steps are converted to a virtual singleselect field.
- * Returns: [{ stepIndex, fieldIndex, field, stepTitle }]
+ * Returns: [{ stepIndex, fieldIndex, stepPosition, field, stepTitle }]
  */
 function getFlattenedFields(formId) {
   const entry = formCache.get(formId);
@@ -260,12 +260,14 @@ function getFlattenedFields(formId) {
   const result = [];
   for (let si = 0; si < entry.steps.length; si++) {
     const step = entry.steps[si];
+    const stepPosition = step.position ?? si;
 
     if (step.step_type === 'select' && step.options && step.options.length > 0) {
       // Convert legacy select step to a virtual singleselect field
       result.push({
         stepIndex: si,
         fieldIndex: 0,
+        stepPosition,
         field: {
           key: step.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || `select_${si}`,
           label: step.title || `Selection ${si + 1}`,
@@ -282,6 +284,7 @@ function getFlattenedFields(formId) {
         result.push({
           stepIndex: si,
           fieldIndex: fi,
+          stepPosition,
           field: fields[fi],
           stepTitle: step.title,
         });
