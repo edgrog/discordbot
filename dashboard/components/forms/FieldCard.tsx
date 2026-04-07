@@ -32,6 +32,7 @@ interface FieldCardProps {
   currentStepPosition: number;
   onUpdate: (updates: Partial<FormField>) => void;
   onRemove: () => void;
+  onCreateStep: (title?: string) => number;
 }
 
 const MAX_LABEL = 45;
@@ -52,6 +53,7 @@ export function FieldCard({
   currentStepPosition,
   onUpdate,
   onRemove,
+  onCreateStep,
 }: FieldCardProps) {
   const {
     attributes,
@@ -266,13 +268,18 @@ export function FieldCard({
                         }
                         onChange={(e) => {
                           const val = e.target.value;
-                          const ns =
-                            val === "next"
-                              ? null
-                              : val === "end"
-                              ? -1
-                              : parseInt(val);
-                          updateOption(idx, { next_step: ns });
+                          if (val === "__new__") {
+                            const pos = onCreateStep(opt.label);
+                            updateOption(idx, { next_step: pos });
+                          } else {
+                            const ns =
+                              val === "next"
+                                ? null
+                                : val === "end"
+                                ? -1
+                                : parseInt(val);
+                            updateOption(idx, { next_step: ns });
+                          }
                         }}
                         className="text-[10px] font-bold border-2 border-ink bg-white px-1 py-1 min-w-[120px]"
                       >
@@ -285,6 +292,7 @@ export function FieldCard({
                               → {s.title || `Step ${s.position + 1}`}
                             </option>
                           ))}
+                        <option value="__new__">+ New step</option>
                       </select>
                     )}
 

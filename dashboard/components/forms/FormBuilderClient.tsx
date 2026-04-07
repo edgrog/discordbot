@@ -47,12 +47,13 @@ export function FormBuilderClient({
     markDirty();
   }
 
-  function handleAddStep() {
+  function handleAddStep(title?: string, selectAfterCreate = true): number {
+    const position = steps.length;
     const newStep: FormStep = {
       id: `new_${Date.now()}`,
       form_id: form.id,
-      position: steps.length,
-      title: "New Step",
+      position,
+      title: title || "New Step",
       step_type: "fields",
       fields: [],
       options: null,
@@ -61,8 +62,9 @@ export function FormBuilderClient({
       updated_at: new Date().toISOString(),
     };
     setSteps((prev) => [...prev, newStep]);
-    setSelectedStepId(newStep.id);
+    if (selectAfterCreate) setSelectedStepId(newStep.id);
     markDirty();
+    return position;
   }
 
   function handleDeleteStep(stepId: string) {
@@ -345,7 +347,7 @@ export function FormBuilderClient({
             onSelect={setSelectedStepId}
             onReorder={handleReorderSteps}
             onDelete={handleDeleteStep}
-            onAdd={handleAddStep}
+            onAdd={() => handleAddStep()}
           />
         </div>
 
@@ -358,6 +360,7 @@ export function FormBuilderClient({
               onTitleChange={handleStepTitleChange}
               onFieldsChange={handleFieldsChange}
               onNextStepChange={handleNextStepChange}
+              onCreateStep={(title) => handleAddStep(title, false)}
             />
           ) : (
             <div className="flex items-center justify-center h-full">
@@ -367,7 +370,7 @@ export function FormBuilderClient({
                 </p>
                 <Button
                   variant="outline"
-                  onClick={handleAddStep}
+                  onClick={() => handleAddStep()}
                   className="border-2 border-dashed border-ink font-black uppercase tracking-wide text-xs hover:bg-pop-lime hover:border-solid"
                 >
                   Add your first step

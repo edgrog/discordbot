@@ -27,6 +27,7 @@ interface FieldEditorProps {
   onTitleChange: (title: string) => void;
   onFieldsChange: (fields: FormField[]) => void;
   onNextStepChange: (next_step: number | null) => void;
+  onCreateStep: (title?: string) => number;
 }
 
 const LOCKED_KEYS = ["dob", "email"];
@@ -39,6 +40,7 @@ export function FieldEditor({
   onTitleChange,
   onFieldsChange,
   onNextStepChange,
+  onCreateStep,
 }: FieldEditorProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -131,6 +133,7 @@ export function FieldEditor({
                   currentStepPosition={step.position}
                   onUpdate={(updates) => updateField(field.key, updates)}
                   onRemove={() => removeField(field.key)}
+                  onCreateStep={onCreateStep}
                 />
               ))}
             </div>
@@ -169,19 +172,23 @@ export function FieldEditor({
                 const val = e.target.value;
                 if (val === "next") onNextStepChange(null);
                 else if (val === "end") onNextStepChange(-1);
-                else onNextStepChange(parseInt(val));
+                else if (val === "__new__") {
+                  const pos = onCreateStep();
+                  onNextStepChange(pos);
+                } else onNextStepChange(parseInt(val));
               }}
               className="w-full text-sm font-bold border-2 border-ink bg-chalk px-3 py-2"
             >
-              <option value="next">Next in order</option>
-              <option value="end">End form (submit)</option>
+              <option value="next">→ Next in order</option>
+              <option value="end">⏹ End form (submit)</option>
               {steps
                 .filter((s) => s.position !== step.position)
                 .map((s) => (
                   <option key={s.id} value={s.position}>
-                    Step {s.position + 1}: {s.title}
+                    → {s.title || `Step ${s.position + 1}`}
                   </option>
                 ))}
+              <option value="__new__">+ Create new step</option>
             </select>
           </div>
         )}
