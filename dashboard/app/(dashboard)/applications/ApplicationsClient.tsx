@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Submission, Form } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
 import { ApplicationFilters } from "@/components/applications/ApplicationFilters";
 import { ApplicationsTable } from "@/components/applications/ApplicationsTable";
 import { ApplicationDetail } from "@/components/applications/ApplicationDetail";
@@ -40,43 +39,22 @@ export function ApplicationsClient({
   );
 
   const fetchApplications = useCallback(async () => {
-    const supabase = createClient();
-    let query = supabase
-      .from("submissions")
-      .select("*, forms!left(name, slug)")
-      .order(sortField, { ascending: sortDir === "asc" })
-      .limit(50);
+    const params = new URLSearchParams();
+    if (filters.status !== "all") params.set("status", filters.status);
+    if (filters.formId !== "all") params.set("formId", filters.formId);
+    if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+    if (filters.dateTo) params.set("dateTo", filters.dateTo);
+    if (filters.search) params.set("search", filters.search);
+    params.set("sortField", sortField);
+    params.set("sortDir", sortDir);
 
-    if (filters.status !== "all") {
-      query = query.eq("status", filters.status);
-    }
-    if (filters.formId !== "all") {
-      query = query.eq("form_id", filters.formId);
-    }
-    if (filters.dateFrom) {
-      query = query.gte("created_at", filters.dateFrom);
-    }
-    if (filters.dateTo) {
-      query = query.lte("created_at", filters.dateTo + "T23:59:59");
-    }
-    if (filters.search) {
-      query = query.or(
-        `discord_username.ilike.%${filters.search}%,discord_id.ilike.%${filters.search}%`
-      );
-    }
-
-    const { data } = await query;
-    if (data) {
-      const mapped: Submission[] = data.map((s: Record<string, unknown>) => {
-        const form = s.forms as { name: string; slug: string } | null;
-        return {
-          ...s,
-          form_name: form?.name ?? undefined,
-          form_slug: form?.slug ?? undefined,
-          forms: undefined,
-        } as unknown as Submission;
-      });
-      setApplications(mapped);
+    try {
+      const res = await fetch(`/api/submissions?${params.toString()}`);
+      if (!res.ok) return;
+      const { data } = await res.json();
+      if (data) setApplications(data as Submission[]);
+    } catch {
+      // Silently fail — initial data still shown
     }
   }, [filters, sortField, sortDir]);
 

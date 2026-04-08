@@ -67,17 +67,30 @@ function BranchingToggle({
     }
   }
 
+  const isOn = field.branching || false;
+
   return (
-    <div className="flex items-center gap-2 pt-1 border-t border-ink/10">
-      <Switch
-        checked={field.branching || false}
-        onCheckedChange={handleToggle}
-      />
-      <span className="text-xs font-black uppercase tracking-wide text-ink">
-        Branching
-      </span>
-      <span className="text-[10px] text-ink/40">
-        Route to different steps per option
+    <div className="flex items-center gap-2 pt-2 border-t border-ink/10">
+      <button
+        type="button"
+        onClick={() => handleToggle(!isOn)}
+        className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ${
+          isOn
+            ? "bg-pop-lime border-ink"
+            : "bg-ink/20 border-ink/40"
+        }`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ${
+            isOn ? "translate-x-[14px]" : "translate-x-0"
+          }`}
+          style={{ marginTop: "1px" }}
+        />
+      </button>
+      <span className={`text-xs font-black uppercase tracking-wide ${
+        isOn ? "text-ink" : "text-ink/40"
+      }`}>
+        Branching {isOn ? "ON" : "OFF"}
       </span>
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent>

@@ -27,6 +27,7 @@ export function FormBuilderClient({
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showChannelHelp, setShowChannelHelp] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
 
   const selectedStep = useMemo(
@@ -335,9 +336,26 @@ export function FormBuilderClient({
         <div className="w-72 border-r-2 border-ink bg-chalk overflow-y-auto p-4 flex-shrink-0">
           {/* Apply Channel */}
           <div className="mb-4 pb-3 border-b-2 border-ink/10">
-            <label className="text-xs font-black uppercase tracking-wide text-ink block mb-1">
-              Apply Channel ID
-            </label>
+            <div className="flex items-center gap-1.5 mb-1">
+              <label className="text-xs font-black uppercase tracking-wide text-ink">
+                Apply Channel ID
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowChannelHelp((v) => !v)}
+                className="w-4 h-4 rounded-full bg-ink/10 hover:bg-ink/20 text-ink/50 text-[10px] font-black flex items-center justify-center"
+                title="How to find a channel ID"
+              >
+                ?
+              </button>
+            </div>
+            {showChannelHelp && (
+              <div className="bg-ink/5 border border-ink/10 px-2 py-1.5 mb-2 text-[10px] text-ink/60 space-y-1">
+                <p><strong>1.</strong> Enable Developer Mode: Discord Settings → Advanced → Developer Mode</p>
+                <p><strong>2.</strong> Right-click the channel where you want the Apply button → Copy Channel ID</p>
+                <p><strong>3.</strong> Paste the ID below</p>
+              </div>
+            )}
             <Input
               value={form.settings?.apply_channel_id || ""}
               onChange={(e) => {
@@ -347,7 +365,7 @@ export function FormBuilderClient({
                 }));
                 markDirty();
               }}
-              placeholder="Right-click channel → Copy ID"
+              placeholder="Paste channel ID here"
               className="text-xs font-bold border-2 border-ink bg-chalk"
             />
             <p className="text-[10px] text-ink/40 mt-1">
