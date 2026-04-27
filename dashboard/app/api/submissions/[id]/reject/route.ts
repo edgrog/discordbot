@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { callBotApi } from "@/lib/bot-api";
 import { writeAuditLog } from "@/lib/audit";
+import { getCurrentUser, unauthorized } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +11,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const dashUser = await getCurrentUser();
+    if (!dashUser) return unauthorized();
+
     const { id } = await params;
     const body = await request.json();
     const service = createServiceClient();
 
-    // TODO: re-enable auth once session flow is wired up
-    const reviewerName = "dashboard-user";
+    const reviewerName = dashUser.name || dashUser.email;
 
     // Race condition guard: check submission exists and is still pending
     const { data: submission } = await service
@@ -59,8 +62,8 @@ export async function POST(
 
     // Audit log
     await writeAuditLog({
-      userId: "system",
-      userEmail: reviewerName,
+      userId: dashUser.id,
+      userEmail: dashUser.email,
       action: "reject",
       targetType: "submission",
       targetId: id,

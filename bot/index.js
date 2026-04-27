@@ -12,10 +12,36 @@ const {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   PermissionFlagsBits,
 } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
+const fs   = require('fs');
+const path = require('path');
 require('dotenv').config();
+
+const BOT_STATE_FILE = path.join(__dirname, 'bot_state.json');
+
+function readBotState() {
+  try {
+    if (!fs.existsSync(BOT_STATE_FILE)) return {};
+    return JSON.parse(fs.readFileSync(BOT_STATE_FILE, 'utf8'));
+  } catch { return {}; }
+}
+
+function writeBotState(state) {
+  try { fs.writeFileSync(BOT_STATE_FILE, JSON.stringify(state, null, 2)); }
+  catch (err) { console.error('bot_state write failed', err.message); }
+}
+
+function truncateField(str, max = 1024) {
+  if (!str) return '—';
+  const s = String(str).trim();
+  if (!s) return '—';
+  return s.length > max ? s.slice(0, max - 3) + '...' : s;
+}
 
 const {
   loadFormConfig,
@@ -108,12 +134,94 @@ async function registerCommands() {
       .toJSON()
   );
 
+  // /legend — manual Grog Legend assignment (admins only)
+  commands.push(
+    new SlashCommandBuilder()
+      .setName('legend')
+      .setDescription('Crown a member as a Grog Legend 👑')
+      .addUserOption(opt => opt.setName('user').setDescription('Member to crown').setRequired(true))
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+      .toJSON()
+  );
+
   await rest.put(
     Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
     { body: commands }
   );
 
   log('info', 'Slash commands registered', { count: commands.length, names: commands.map(c => c.name) });
+}
+
+// ─── Store Request Embed (persistent) ────────────────────────────────────────
+
+function buildStoreRequestPayload() {
+  const embed = new EmbedBuilder()
+    .setColor(0xFFD700)
+    .setTitle('📍 Get Grog In Your Area')
+    .setDescription("Don't see Grog at your local? Tell us where to go next.\nClick below to submit a store request.");
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('store_request_open').setLabel('📍 Request a Store').setStyle(ButtonStyle.Primary),
+  );
+  return { embeds: [embed], components: [row] };
+}
+
+function buildStoreRequestModal() {
+  return new ModalBuilder().setCustomId('store_request_modal').setTitle('📍 Request a Grog Store').addComponents(
+    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('store_name').setLabel('Store name').setStyle(TextInputStyle.Short).setRequired(true)),
+    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('store_address').setLabel('Store address / suburb').setStyle(TextInputStyle.Short).setRequired(true)),
+    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('visit_frequency').setLabel('How often do you shop there?').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('Weekly / Monthly / Occasionally')),
+    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('notes').setLabel('Any extra info? (optional)').setStyle(TextInputStyle.Paragraph).setRequired(false)),
+  );
+}
+
+async function ensureStoreRequestEmbed() {
+  const channelId = process.env.STORE_REQUEST_CHANNEL_ID;
+  if (!channelId) { log('warn', 'STORE_REQUEST_CHANNEL_ID not set — skipping store request embed'); return; }
+
+  let channel;
+  try { channel = await client.channels.fetch(channelId); }
+  catch (err) { log('error', 'Store request channel fetch failed', { channelId, err: err.message }); return; }
+  if (!channel) return;
+
+  const state = readBotState();
+  if (state.storeRequestMessageId) {
+    try {
+      await channel.messages.fetch(state.storeRequestMessageId);
+      log('info', 'Store request embed already posted', { messageId: state.storeRequestMessageId });
+      return;
+    } catch {
+      log('warn', 'Stored store-request message not found, reposting');
+    }
+  }
+
+  try {
+    const msg = await channel.send(buildStoreRequestPayload());
+    writeBotState({ ...state, storeRequestMessageId: msg.id });
+    log('info', 'Store request embed posted', { messageId: msg.id });
+  } catch (err) {
+    log('error', 'Failed to post store request embed', { err: err.message });
+  }
+}
+
+// ─── New Member: auto-role + welcome DM ──────────────────────────────────────
+
+async function handleGuildMemberAdd(member) {
+  const fanRoleId = process.env.ROLE_FAN;
+  if (fanRoleId) {
+    try {
+      await member.roles.add(fanRoleId);
+      log('info', 'Grog Fan role assigned', { userId: member.id });
+    } catch (err) {
+      log('error', 'Failed to assign Grog Fan role', { userId: member.id, err: err.message, code: err.code });
+    }
+  } else {
+    log('warn', 'ROLE_FAN not set — skipping auto-role on join');
+  }
+
+  const username = member.user.username;
+  const dm = `Hey ${username} 👋\n\nWelcome to the Grog Discord — the official home of the hardest Japanese soda 🍋\n\nHere's how it works:\n\n🎥 Creator, artist, bar, or club? Hit #get-partner and apply for a partner role.\n📍 Don't see Grog near you? Drop a store request in #get-grog-local.\n📸 Post your Grog pics and vids in #grog-spotted — best ones get featured.\n\nGlad you're here.\n— The Grog Crew`;
+  try { await member.send(dm); }
+  catch { log('info', 'Welcome DM not delivered (DMs likely closed)', { userId: member.id }); }
 }
 
 // ─── Post Apply Embeds for All Active Forms ──────────────────────────────────
@@ -148,6 +256,9 @@ client.once('ready', async () => {
 
   // Post apply embeds for forms with configured channels
   await postAllApplyEmbeds();
+
+  // Post the persistent Store Request embed
+  await ensureStoreRequestEmbed();
 
   // Start signal poller (reload forms + re-register commands on signal)
   startSignalPoller(supabase, async () => {
@@ -186,6 +297,13 @@ client.once('ready', async () => {
   });
 });
 
+// ─── New Members ─────────────────────────────────────────────────────────────
+
+client.on('guildMemberAdd', async (member) => {
+  try { await handleGuildMemberAdd(member); }
+  catch (err) { log('error', 'guildMemberAdd handler error', { err: err.message, userId: member.id }); }
+});
+
 // ─── Message Handler (text answers in threads) ───────────────────────────────
 
 client.on('messageCreate', async (message) => {
@@ -203,6 +321,44 @@ client.on('interactionCreate', async (interaction) => {
   // ── Slash Commands ────────────────────────────────────────────────────────
 
   if (interaction.isChatInputCommand()) {
+    // /legend — manual Grog Legend assignment
+    if (interaction.commandName === 'legend') {
+      if (!interaction.guild) {
+        await interaction.reply({ content: 'This command must be used in the server.', ephemeral: true });
+        return;
+      }
+      if (!interaction.member.permissions.has(PermissionFlagsBits.ManageRoles)) {
+        await interaction.reply({ content: "You don't have permission to use this command.", ephemeral: true });
+        return;
+      }
+
+      const legendRoleId = process.env.ROLE_LEGEND;
+      if (!legendRoleId) {
+        await interaction.reply({ content: '`ROLE_LEGEND` is not configured. Set it in env and restart the bot.', ephemeral: true });
+        return;
+      }
+
+      const target = interaction.options.getUser('user', true);
+      try {
+        const member = await interaction.guild.members.fetch(target.id);
+        await member.roles.add(legendRoleId);
+        log('info', 'Grog Legend role assigned', { targetUserId: target.id, by: interaction.user.tag });
+      } catch (err) {
+        const hint = err.code === 50013
+          ? 'Bot role must be **above** the Grog Legend role in Server Settings → Roles.'
+          : err.message;
+        log('error', 'Legend role assignment failed', { err: err.message, code: err.code });
+        await interaction.reply({ content: `Couldn't assign the role — ${hint}`, ephemeral: true });
+        return;
+      }
+
+      try { await target.send("You've been crowned a Grog Legend 👑 Welcome to #legends-lounge."); }
+      catch { log('info', 'Legend DM not delivered (DMs likely closed)', { targetUserId: target.id }); }
+
+      await interaction.reply({ content: `Done — <@${target.id}> is now a Grog Legend.`, ephemeral: true });
+      return;
+    }
+
     // Admin reload
     if (interaction.commandName === 'reload-forms') {
       await interaction.deferReply({ ephemeral: true });
@@ -237,6 +393,13 @@ client.on('interactionCreate', async (interaction) => {
   // ── Buttons ───────────────────────────────────────────────────────────────
 
   if (interaction.isButton()) {
+    // Store-request entry button
+    if (interaction.customId === 'store_request_open') {
+      try { await interaction.showModal(buildStoreRequestModal()); }
+      catch (err) { log('error', 'Failed to show store request modal', { err: err.message }); }
+      return;
+    }
+
     const prefix = interaction.customId.split('_')[0];
 
     // Thread-related buttons
@@ -350,6 +513,77 @@ client.on('interactionCreate', async (interaction) => {
       .setFooter({ text: `${action === 'approve' ? 'APPROVED' : 'REJECTED'} by ${interaction.user.tag} | Submission ID: ${submissionId}` });
 
     await interaction.update({ embeds: [updatedEmbed], components: [] });
+    return;
+  }
+
+  // ── Modal Submissions ─────────────────────────────────────────────────────
+
+  if (interaction.isModalSubmit() && interaction.customId === 'store_request_modal') {
+    const userId         = interaction.user.id;
+    const storeName      = interaction.fields.getTextInputValue('store_name').trim();
+    const storeAddress   = interaction.fields.getTextInputValue('store_address').trim();
+    const visitFrequency = interaction.fields.getTextInputValue('visit_frequency').trim();
+    const notes          = (interaction.fields.getTextInputValue('notes') || '').trim();
+
+    const { data: row, error } = await supabase
+      .from('store_requests')
+      .insert([{
+        discord_id:       userId,
+        discord_username: interaction.user.tag,
+        store_name:       storeName,
+        store_address:    storeAddress,
+        visit_frequency:  visitFrequency,
+        notes:            notes || null,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      log('error', 'store_requests insert failed', { userId, err: error.message });
+      await interaction.reply({ content: "Couldn't save your store request. Try again in a sec.", ephemeral: true });
+      return;
+    }
+
+    const scoutRoleId = process.env.ROLE_SCOUT;
+    if (scoutRoleId && interaction.guild) {
+      try {
+        const member = await interaction.guild.members.fetch(userId);
+        await member.roles.add(scoutRoleId);
+        log('info', 'Grog Scout role assigned', { userId });
+      } catch (err) {
+        log('error', 'Scout role assignment failed', { userId, err: err.message, code: err.code });
+        await alertAdmin(`Warning: Scout role not assigned for <@${userId}> (Store request \`${row.id}\`) — ${err.message}`);
+      }
+    } else if (!scoutRoleId) {
+      log('warn', 'ROLE_SCOUT not set — skipping role assignment');
+    }
+
+    const adminChannelId = process.env.STORE_ADMIN_CHANNEL_ID;
+    if (adminChannelId) {
+      try {
+        const adminChannel = await client.channels.fetch(adminChannelId);
+        if (adminChannel) {
+          const embed = new EmbedBuilder()
+            .setColor(0xFFD700)
+            .setTitle('📍 New Store Request')
+            .addFields(
+              { name: '🏪 Store',     value: truncateField(storeName),      inline: true },
+              { name: '📍 Address',   value: truncateField(storeAddress),   inline: true },
+              { name: '🔁 Frequency', value: truncateField(visitFrequency), inline: true },
+              { name: '🏷️ Discord',  value: `<@${userId}>`,                inline: true },
+              { name: '📝 Notes',     value: truncateField(notes) },
+            )
+            .setFooter({ text: `Request ID: ${row.id}` })
+            .setTimestamp();
+          await adminChannel.send({ embeds: [embed] });
+        }
+      } catch (err) {
+        log('error', 'Failed to post store request admin embed', { err: err.message });
+      }
+    }
+
+    await interaction.reply({ content: "Nice one 🍋 We'll check it out. You're officially a Grog Scout.", ephemeral: true });
+    return;
   }
 });
 

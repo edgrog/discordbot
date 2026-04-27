@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { Submission } from "@/lib/types";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -10,10 +12,10 @@ import { CategoryChart } from "@/components/dashboard/CategoryChart";
 import { FileText, Clock, CheckCircle2, XCircle } from "lucide-react";
 
 export default async function HomePage() {
-  const supabase = createServiceClient();
+  const dashUser = await getCurrentUser();
+  if (!dashUser) redirect("/login?next=/");
 
-  // TODO: TEMPORARY — auth bypassed for testing. Re-enable before production.
-  const dashUser = { email: "ed@grog.shop", name: "Ed", role: "admin" as const };
+  const supabase = createServiceClient();
 
   const { count: totalCount } = await supabase
     .from("submissions")

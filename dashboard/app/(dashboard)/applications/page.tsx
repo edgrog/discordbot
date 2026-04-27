@@ -1,13 +1,16 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { Submission, Form } from "@/lib/types";
 import { ApplicationsClient } from "./ApplicationsClient";
 
 export default async function ApplicationsPage() {
-  const supabase = createServiceClient();
+  const dashUser = await getCurrentUser();
+  if (!dashUser) redirect("/login?next=/applications");
 
-  // TODO: TEMPORARY — auth bypassed for testing. Re-enable before production.
+  const supabase = createServiceClient();
 
   // Initial data load — submissions joined with forms
   const { data: submissions } = await supabase
@@ -37,7 +40,7 @@ export default async function ApplicationsPage() {
     <ApplicationsClient
       initialData={mapped}
       forms={(forms as Form[]) || []}
-      isAdmin={true}
+      isAdmin={dashUser.role === "admin"}
     />
   );
 }
